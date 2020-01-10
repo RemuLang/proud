@@ -20,13 +20,13 @@ constr : '|' <UPPER>                                   { loc_((call_k, *$1, ()),
        | '|' <UPPER> ':' type '->' type                { loc_((ann_k, *$1, (arrow_k, $3, $5)), $1) }
        ;
 
-primitive_pat : <LOWER>                                  { loc_((call_k, *$0, ()), $0) }
-              | <UPPER>                                  { loc_(*$0, $0) }
+primitive_pat : <LOWER>                                  { loc_(*$0, $0) }
+              | <UPPER>                                  { loc_((call_k, $0), $0) }
               | <INT>                                    { loc_(int(*$0), $0) }
               | <FLOAT>                                  { loc_(float(*$0), $0) }
               | <STRING>                                 { loc_(DQString(*$0), $0) }
-              | <LOWER> '(' separated_list(',', pat) ')' { loc_((call_k, *$0, $2), $0) }
-              | <UPPER> '(' separated_list(',', pat) ')' { loc_((uncall_k, *$0, $2), $0) }
+              | <LOWER> '(' separated_list(',', pat) ')' { loc_((uncall_k, *$0, $2), $0) }
+              | <UPPER> '(' separated_list(',', pat) ')' { loc_((call_k, *$0, $2), $0) }
               | '^' expr                                 { loc_((pin_k, $1), $0) }
               | 'when' expr                              { loc_((guard_k, $1), $0) }
               | '(' ')'                                  { loc_((tuple_k, ()), $0) }

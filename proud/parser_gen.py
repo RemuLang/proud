@@ -5921,7 +5921,7 @@ def mk_parser(stmt_k, expr_k, let_k, type_k, and_k, or_k, quote_k, unquote_k, la
                                 lcl_8 = _slot_0
                                 lcl_8 = lcl_8.value
                                 lcl_9 = _slot_2
-                                lcl_8 = (uncall__k, lcl_8, lcl_9)
+                                lcl_8 = (call__k, lcl_8, lcl_9)
                                 lcl_9 = _slot_0
                                 lcl_8 = loc__(lcl_8, lcl_9)
                                 _slot_local__1 = lcl_8
@@ -5931,7 +5931,7 @@ def mk_parser(stmt_k, expr_k, let_k, type_k, and_k, or_k, quote_k, unquote_k, la
                         lcl_4 = lcl_6
                     else:
                         lcl_6 = _slot_0
-                        lcl_6 = lcl_6.value
+                        lcl_6 = (call__k, lcl_6)
                         lcl_7 = _slot_0
                         lcl_6 = loc__(lcl_6, lcl_7)
                         _slot_local__1 = lcl_6
@@ -6010,7 +6010,7 @@ def mk_parser(stmt_k, expr_k, let_k, type_k, and_k, or_k, quote_k, unquote_k, la
                                 lcl_8 = _slot_0
                                 lcl_8 = lcl_8.value
                                 lcl_9 = _slot_2
-                                lcl_8 = (call__k, lcl_8, lcl_9)
+                                lcl_8 = (uncall__k, lcl_8, lcl_9)
                                 lcl_9 = _slot_0
                                 lcl_8 = loc__(lcl_8, lcl_9)
                                 _slot_local__1 = lcl_8
@@ -6021,8 +6021,6 @@ def mk_parser(stmt_k, expr_k, let_k, type_k, and_k, or_k, quote_k, unquote_k, la
                     else:
                         lcl_6 = _slot_0
                         lcl_6 = lcl_6.value
-                        lcl_7 = ()
-                        lcl_6 = (call__k, lcl_6, lcl_7)
                         lcl_7 = _slot_0
                         lcl_6 = loc__(lcl_6, lcl_7)
                         _slot_local__1 = lcl_6
