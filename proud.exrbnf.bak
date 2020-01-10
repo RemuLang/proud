@@ -1,0 +1,101 @@
+START : <BOF> <EOF>                { [] }
+      | <BOF> list(TopLevel) <EOF> { $1 }
+      ;
+
+ID : <UPPER>
+   | <LOWER>
+   ;
+
+TopLevel : 'let' pat '=' expr
+         | 'let' pat ':' type '=' expr
+         | 'type' ID
+         ;
+
+primitive_pat : <LOWER>  # cature
+              | <UPPER>  # recogniser
+              | <INT> | <FLOAT> | <STRING>
+              | <LOWER> '(' separated_list(',', pat) ')'
+              | <UPPER> '(' separated_list(',', pat) ')'
+              | '^' expr
+              | 'when' expr
+              | '(' ')'
+              | '(' separated_list(',', pat) ')'
+              | '[' ']'
+              | '[' separated_list(',', pat) ']'
+              | '{' '}'
+              | '{' separated_list(',', pat_pair) '}'
+              ;
+
+pat_pair : <LOWER> '=' pat;
+
+and_pat      : and_pat 'and' primitive_pat
+             | primitive_pat
+             ;
+
+pat : pat 'or' and_pat
+    | and_pat
+    ;
+
+binary_operator : '^' | <OP> | 'and' | 'or';
+
+expr : 'let' pat '=' expr 'in' expr
+     | 'let' pat ':' type '=' expr 'in' expr
+     | '|' lambda
+     | expr 'match' list(case)
+     | separated_list(binary_operator, call_expr)
+     ;
+
+case : '|' pat '->' expr ;
+
+lambda : pat lambda_typed lambda_body;
+
+lambda_body : '=>' expr # implicit arg
+            | '->' expr # function
+            ;
+
+lambda_typed : ':' type '|'
+             | '|'
+             ;
+
+call_expr : call_expr atom
+          | atom
+          ;
+
+atom      : '(' ')'
+          | '[' ']'
+          | '{' '}'
+          | 'True'
+          | 'False'
+          | '[' separated_list(',', expr) ']'
+          | '(' separated_list(',', expr) ')'
+          | '{' separated_list(',', expr_pair) '}'
+          | <STRING>
+          | <INT>
+          | <FLOAT>
+          ;
+
+expr_pair : <LOWER> '=' expr;
+
+type : 'forall' list(ID) '.' type
+     | type_app
+     ;
+
+arrow_type : type_app
+           | type_app '->' type
+           | type_app '=>' type
+           ;
+
+type_app : type_app atom_type
+         | atom_type
+         ;
+
+atom_type : '(' separated_list(',', type) ')'
+          | '(' ')'
+          | '{' separated_list(',', type_pair) '}'
+          | '{' '}'
+          | '[' ']'
+          | '[' type ']'
+          | ID
+          ;
+
+type_pair : <LOWER> '=' type ;
