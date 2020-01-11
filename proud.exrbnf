@@ -94,8 +94,8 @@ atom      : '(' ')'             { loc_((tuple_k, ()), $0) }
           | '{' '}'             { loc_((record_k, ()), $0) }
           | 'True'              { loc_(True, $0) }
           | 'False'             { loc_(False, $0) }
-          | '[' separated_list(',', expr) ']'        { loc_((list_k, $1), $0) }
-          | '(' separated_list(',', expr) ')'        { loc_((tuple_k, $1), $0) }
+          | '[' separated_list(',', expr) ']'        { loc_((list_k, tuple($1)), $0) }
+          | '(' separated_list(',', expr) ')'        { loc_((tuple_k, tuple($1)), $0) }
           | ID                                       { $0 }
           | <INT>                                    { loc_(int(*$0), $0) }
           | <FLOAT>                                  { loc_(float(*$0), $0) }
@@ -104,7 +104,7 @@ atom      : '(' ')'             { loc_((tuple_k, ()), $0) }
           | '$' atom                                 { loc_((unquote_k, $1), $0) }
           | atom '.' ID                              { loc_((attr_k, $0, $2), $1) }
 
-          | '{' separated_list(',', expr_pair) row_expr  { loc_((record_k, $1, $2), $0) }
+          | '{' separated_list(',', expr_pair) row_expr  { loc_((record_k, tuple($1), $2), $0) }
           ;
 
 row_expr  : '}'            { None }
@@ -128,14 +128,14 @@ type_app : type_app atom_type      { (call_k, $0, $1) }
          | atom_type               { $0 }
          ;
 
-atom_type : '(' separated_list(',', type) ')'   { loc_((tuple_k, $1), $0) }
+atom_type : '(' separated_list(',', type) ')'   { loc_((tuple_k, tuple($1)), $0) }
           | '(' ')'                             { loc_((tuple_k, ()), $0) }
           | '{' '}'                             { loc_((record_k, ()), $0) }
           # `[]` is for type constructor
           | '[' ']'                             { loc_((list_k, None), $0) }
           | '[' type ']'                        { loc_((list_k, $1), $0) }
           | ID                                  { $0 }
-          | '{' separated_list(',', type_pair) row_type  { loc_((record_k, $1, $2), $0) }
+          | '{' separated_list(',', type_pair) row_type  { loc_((record_k, $1, tuple($2)), $0) }
           ;
 
 row_type  : '}'            { None }

@@ -333,12 +333,13 @@ dispatcher[attr_k] = attr
 
 class Eval_module(Protocol):
     @abc.abstractmethod
-    def module(module_eval, name, filename, stmts):
+    def module(module_eval, is_rec, name, filename, stmts):
         ...
 
 
-def module(name, filename, stmts):
-    return lambda module_eval: module_eval.module(name, filename, stmts)
+def module(is_rec, name, filename, stmts):
+    return lambda module_eval: module_eval.module(is_rec, name, filename, stmts
+                                                  )
 
 
 dispatcher[module_k] = module

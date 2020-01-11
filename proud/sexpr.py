@@ -43,7 +43,7 @@ pin_k = ASTTag("pin", ["expr"])
 uncall_k = ASTTag("uncall", ["f", "arg"])
 cons_k = ASTTag("cons", ["branches"])
 attr_k = ASTTag("attr", ["base", ("attr_name", "builtins.str")])
-module_k = ASTTag("module", ["name", "filename", "stmts"])
+module_k = ASTTag("module", ['is_rec', "name", "filename", "stmts"])
 
 
 def unloc(e):
@@ -73,3 +73,7 @@ lowered = [
     set_k, func_k, invoke_k, prj_k, label_k, goto_if_k, goto_if_not_k,
     goto_k, indir_k, addr_k, block_k, loc_k, tuple_k, list_k, switch_k
 ]
+
+
+def is_ast(node):
+    return isinstance(node, tuple) and node and isinstance(node[0], ASTTag)

@@ -1,5 +1,5 @@
 import typing as t
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 
 T = t.TypeVar('T')
 
@@ -26,10 +26,10 @@ class Ref(t.Generic[T]):
         self.contents = v
 
 
-class Sym(namedtuple("Sym", ["name", "uid"])):
+class Sym(namedtuple("Sym", ["name", "uid", "is_cell"])):
     name: str
     uid: object
-
+    is_cell: Ref[bool]
 
 class Scope(
         namedtuple("Scope",
@@ -45,8 +45,21 @@ class Scope(
     def enter(self, name: str) -> Sym:
         ...
 
-    def sub_scope(self, hold_bound=False):
+    def sub_scope(self, hold_bound=False) -> 'Scope':
         ...
+
+    def get_newest_bounds(self) -> t.List[Sym]:
+        if not self.hold_bound:
+            # TODO
+            raise ValueError
+        names = []
+        bounds = self.boundvars
+        for k, v in bounds.items():
+            if k in names:
+                names.remove(k)
+            names.append(k)
+
+        return [bounds[n] for n in names]
 
 
 def require(scope: Scope, name: str) -> Sym:
@@ -59,36 +72,20 @@ def require(scope: Scope, name: str) -> Sym:
     if scope.parent:
         var = require(scope.parent, name)
         scope.freevars[name] = var
+        var.is_cell.contents = True
         return var
     raise Undef(name)
-
-
-def request_bound(scope: Scope, name: str, bound: Sym):
-    if name in scope.boundvars:
-        return
-    scope.boundvars[name] = bound
-    if scope.hold_bound:
-        return
-    if not scope.parent:
-        raise NoAllocatorForBound(name)
-
-    request_bound(scope.parent, name, bound)
 
 
 def enter(scope: Scope, name: str) -> Sym:
     if name in scope.boundvars:
         raise BindTwice(name)
-    s = scope.boundvars[name] = Sym(name, object())
+    s = scope.boundvars[name] = Sym(name, object(), Ref(False))
     return s
 
 
 def sub_scope(scope: Scope, hold_bound=False):
-    return Scope({}, {}, hold_bound, scope)
-
-
-class ScopedSym(namedtuple("ScopedSym", ["scope", "sym"])):
-    scope: Scope
-    sym: Sym
+    return Scope(OrderedDict(), OrderedDict(), hold_bound, scope)
 
 
 Scope.require = require
