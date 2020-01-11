@@ -266,6 +266,19 @@ def forall(fresh_vars: builtins.tuple, polytype):
 dispatcher[forall_k] = forall
 
 
+class Eval_exist(Protocol):
+    @abc.abstractmethod
+    def exist(module, bound_vars: builtins.tuple, monotypecd):
+        ...
+
+
+def exist(bound_vars: builtins.tuple, monotypecd):
+    return lambda module: module.exist(bound_vars, monotypecd)
+
+
+dispatcher[exist_k] = exist
+
+
 class Eval_guard(Protocol):
     @abc.abstractmethod
     def guard(module, expr):
@@ -333,12 +346,12 @@ dispatcher[attr_k] = attr
 
 class Eval_module(Protocol):
     @abc.abstractmethod
-    def module(module_eval, is_rec, name, filename, stmts):
+    def module(module_eval, is_rec, name, stmts, filename):
         ...
 
 
-def module(is_rec, name, filename, stmts):
-    return lambda module_eval: module_eval.module(is_rec, name, filename, stmts
+def module(is_rec, name, stmts, filename):
+    return lambda module_eval: module_eval.module(is_rec, name, stmts, filename
                                                   )
 
 

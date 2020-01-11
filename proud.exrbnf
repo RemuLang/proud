@@ -1,6 +1,4 @@
-START : <BOF> <EOF>                { [] }
-      | <BOF> list(TopLevel) <EOF> { $1 }
-      ;
+START : <BOF> module_def <EOF> { $1 } ;
 
 ID : <UPPER> { loc_(*$0, $0) }
    | <LOWER> { loc_(*$0, $0) }
@@ -116,6 +114,7 @@ expr_pair : <LOWER> '=' expr { loc_((pair_k, *$0, $2), $0) }
           ;
 
 type : 'forall' list(ID) '.' type  { loc_((forall_k, tuple($1), $3), $0) }
+     | 'exist' list(ID) '.' type   { loc_((exist_k, tuple($1), $3), $0) }
      | arrow_type                  { $0 }
      ;
 

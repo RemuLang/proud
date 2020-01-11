@@ -9,10 +9,14 @@ from contextlib import contextmanager
 import typing
 
 
-class CompilerCtx(namedtuple("CompilerCtx", ["scope", "tc_state", "tenv"])):
+class CompilerCtx(
+        namedtuple("CompilerCtx",
+                   ["scope", "tc_state", "tenv", "filename", "path"])):
     scope: Scope
     tc_state: TCState
     tenv: typing.Dict[Sym, te.T]
+    filename: str
+    path: str
 
     def type_of_value(self, sym: Sym):
         return self.tenv[sym]
@@ -48,7 +52,7 @@ class Modular(ce.Eval_module):
         self.filename = filename
         self.comp_ctx = compiler_ctx
 
-    def module(module_eval, is_rec, name, filename, stmts):
+    def module(module_eval, is_rec, name, stmts, filename):
         prev_comp_ctx = module_eval.comp_ctx
         tc_state = prev_comp_ctx.tc_state
         tenv = prev_comp_ctx.tenv
@@ -61,12 +65,11 @@ class Modular(ce.Eval_module):
             block_outside.append((sexpr.set_k, mod_record_sym, None))
 
         with keep(module_eval):
+
+            path = '{}.{}'.format(prev_comp_ctx.path, name)
             scope_inside = prev_comp_ctx.scope.sub_scope(hold_bound=True)
             comp_ctx = module_eval.comp_ctx = CompilerCtx(
-                scope_inside, tc_state, tenv)
-
-            module_eval.path = '{}.{}'.format(module_eval.path, name)
-            module_eval.filename = filename
+                scope_inside, tc_state, tenv, filename, path)
 
             exprs = []
             for stmt in stmts:
@@ -168,7 +171,8 @@ class Typing(ce.Eval_forall, ce.Eval_arrow, ce.Eval_imply, ce.Eval_tuple,
         fresh_vars = fresh_vars_
         for n in fresh_vars:
             var = module.comp_ctx.scope.enter(n)
-            module.comp_ctx.tenv[var] = types.type_app(types.type_type, types.fresh(n))
+            module.comp_ctx.tenv[var] = types.type_app(types.type_type,
+                                                       types.fresh(n))
 
         return types.forall(fresh_vars, module.eval(polytype))
 
@@ -188,23 +192,35 @@ class Typing(ce.Eval_forall, ce.Eval_arrow, ce.Eval_imply, ce.Eval_tuple,
 class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
               ce.Eval_binary, ce.Eval_list, ce.Eval_tuple, ce.Eval_record,
               ce.Eval_call, ce.Eval_attr, ce.Eval_quote):
+    def call(module, f, arg):
+        f_e, f_t = module.eval(f)
+        arg_e, arg_t = module.eval(arg)
+
+
     def lam(module, arg, type, ret):
         loc, name = sexpr.unloc(arg)
         _, type = sexpr.unloc(type)
         prev_comp_ctx = module.comp_ctx
         tc_state = prev_comp_ctx.tc_state
         tenv = prev_comp_ctx.tenv
-        sub_scope = module.comp_ctx.scope.sub_scope(hold_bound=False)
+        sub_scope = prev_comp_ctx.scope.sub_scope(hold_bound=False)
+        filename = prev_comp_ctx.filename
+        path = prev_comp_ctx.path
         with keep(module):
             arg_e = sub_scope.enter(name)
+            module.comp_ctx = CompilerCtx(sub_scope, tc_state, tenv, filename,
+                                          path)
             if type:
-                 arg_t = Typing(module.comp_ctx).eval(type)
+                arg_t = Typing(module.comp_ctx).eval(type)
             else:
                 arg_t = tc_state.new_var()
             ret_e, ret_t = module.eval(ret)
-            types.arrow(arg_t, ret_t)
+            my_type = types.arrow(arg_t, ret_t)
+            freevars = tuple(sub_scope.freevars.values())
+            name = "{}.lambda".format(path)
+            me = sexpr.func_k, name, filename, freevars, arg_e, ret_e
+            return me, my_type
 
-        pass
 
     def let(module, is_rec, name, type, bound, body):
         loc, name = sexpr.unloc(name)
@@ -214,7 +230,9 @@ class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
         tenv = prev_comp_ctx.tenv
         sub_scope = module.comp_ctx.scope.sub_scope(hold_bound=False)
         with keep(module):
-            module.comp_ctx = CompilerCtx(sub_scope, tc_state, tenv)
+            module.comp_ctx = CompilerCtx(sub_scope, tc_state, tenv,
+                                          prev_comp_ctx.filename,
+                                          prev_comp_ctx.path)
             if is_rec:
                 me = sub_scope.enter(name)
                 bound_e, bound_t = module.eval(bound)

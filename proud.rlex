@@ -33,6 +33,7 @@ W \s+
 %require imply_k
 %require loc_k
 %require forall_k
+%require exist_k
 %require guard_k
 %require pin_k
 %require uncall_k

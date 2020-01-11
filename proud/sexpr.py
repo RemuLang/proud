@@ -38,12 +38,13 @@ arrow_k = ASTTag("arrow", ["arg", "ret"])
 imply_k = ASTTag("imply", ["arg", "ret"])
 loc_k = ASTTag("loc", ["location", "contents"])
 forall_k = ASTTag("forall", [("fresh_vars", "builtins.tuple"), "polytype"])
+exist_k = ASTTag("exist", [("bound_vars", "builtins.tuple"), "monotypecd"])
 guard_k = ASTTag("guard", ["expr"])
 pin_k = ASTTag("pin", ["expr"])
 uncall_k = ASTTag("uncall", ["f", "arg"])
 cons_k = ASTTag("cons", ["branches"])
 attr_k = ASTTag("attr", ["base", ("attr_name", "builtins.str")])
-module_k = ASTTag("module", ['is_rec', "name", "filename", "stmts"])
+module_k = ASTTag("module", ['is_rec', "name", "stmts", "filename"])
 
 
 def unloc(e):
