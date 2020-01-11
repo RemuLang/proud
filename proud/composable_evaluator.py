@@ -86,12 +86,12 @@ dispatcher[unquote_k] = unquote
 
 class Eval_lam(Protocol):
     @abc.abstractmethod
-    def lam(module, arg):
+    def lam(module, arg, type, ret):
         ...
 
 
-def lam(arg):
-    return lambda module: module.lam(arg)
+def lam(arg, type, ret):
+    return lambda module: module.lam(arg, type, ret)
 
 
 dispatcher[lambda_k] = lam

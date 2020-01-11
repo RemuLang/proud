@@ -33,10 +33,13 @@ def tuple(*xs: te.T):
 def record(row_t: te.Row) -> te.T:
     return te.record_t, row_t
 
+def fresh(n: str):
+    return te.fresh_t, n
 
 bigint_t = te.nom_t, "bigint"
 string_t = te.nom_t, "string"
 float_t = te.nom_t, "float"
 list_t = te.nom_t, "list"
 complex_t = te.nom_t, "complex"
+
 
