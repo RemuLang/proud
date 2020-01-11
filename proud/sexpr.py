@@ -18,7 +18,7 @@ class ASTTag:
         return self.name
 
 
-let_k = ASTTag("let", ["is_rec", "name", "bound", "body"])
+let_k = ASTTag("let", ["is_rec", "name", "type", "bound", "body"])
 type_k = ASTTag("type", ["name", "definition"])
 and_k = ASTTag("intersect", ["left", "right"])
 or_k = ASTTag("alt", ["left", "right"])

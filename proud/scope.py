@@ -74,7 +74,10 @@ def require(scope: Scope, name: str) -> Sym:
         scope.freevars[name] = var
         var.is_cell.contents = True
         return var
-    raise Undef(name)
+    # external
+    var = Sym(name, object(), Ref(False))
+    scope.freevars[name] = var
+    return var
 
 
 def enter(scope: Scope, name: str) -> Sym:

@@ -31,7 +31,7 @@ class CompilerCtx(namedtuple("CompilerCtx", ["scope", "tc_state", "tenv"])):
 
 
 @contextmanager
-def keep(self: 'Modular'):
+def keep(self):
     comp = self.comp_ctx
     try:
         yield
@@ -86,6 +86,7 @@ class Modular(ce.Eval_module):
                 else:
                     nom_typename = tc_state.mk_new_type(typename)
 
+                block_inside.append((sexpr.unloc, loc))
                 block_inside.append((sexpr.set_k, sym_typename, nom_typename))
 
                 tenv[sym_typename] = types.type_app(types.type_type,
@@ -160,14 +161,6 @@ class Typing(ce.Eval_forall, ce.Eval_arrow, ce.Eval_imply, ce.Eval_tuple,
         ret = module.eval(ret)
         return types.arrow(arg, ret)
 
-    def eval(self, x):
-        if isinstance(x, Sym):
-            return self.comp_ctx.type_of_type(x)
-        if sexpr.is_ast(x):
-            hd, *args = x
-            return ce.dispatcher[hd](*args)(self)
-
-        return type_map[type(x)]
 
     def forall(module, fresh_vars: typing.Tuple[str, ...], polytype):
         fresh_vars_ = frozenset(fresh_vars)
@@ -175,6 +168,15 @@ class Typing(ce.Eval_forall, ce.Eval_arrow, ce.Eval_imply, ce.Eval_tuple,
             raise excs.DuplicatedForallVar(fresh_vars_)
         fresh_vars = fresh_vars_
         return types.forall(fresh_vars, module.eval(polytype))
+
+    def eval(self, x):
+        if isinstance(x, Sym):
+            return self.comp_ctx.type_of_type(x)
+        if sexpr.is_ast(x):
+            hd, *args = x
+            return ce.dispatcher[hd](*args)(self)
+
+        raise ValueError(x)
 
     def __init__(self, comp_ctx: CompilerCtx):
         self.comp_ctx = comp_ctx
@@ -184,5 +186,41 @@ class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
               ce.Eval_binary, ce.Eval_list, ce.Eval_tuple, ce.Eval_record,
               ce.Eval_call, ce.Eval_attr, ce.Eval_quote):
 
-    def let(module, is_rec, name, bound, body):
-        pass
+    def __init__(self, comp_ctx: CompilerCtx):
+        self.comp_ctx = comp_ctx
+
+    def eval(self, x):
+        if sexpr.is_ast(x):
+            hd, *args = x
+            return ce.dispatcher[hd](*args)(self)
+        if isinstance(x, Sym):
+            return x, self.comp_ctx.type_of_value(x)
+        return x, type_map[type(x)]
+
+    def let(module, is_rec, name, type, bound, body):
+        loc, name = sexpr.unloc(name)
+
+        prev_comp_ctx = module.comp_ctx
+        tc_state = prev_comp_ctx.tc_state
+        tenv = prev_comp_ctx.tenv
+        sub_scope = module.comp_ctx.scope.sub_scope(hold_bound=False)
+        with keep(module):
+            module.comp_ctx = CompilerCtx(sub_scope, tc_state, tenv)
+            if is_rec:
+                me = sub_scope.enter(name)
+                bound_e, bound_t = module.eval(bound)
+            else:
+                bound_e, bound_t = module.eval(bound)
+                me = sub_scope.enter(name)
+
+            if type:
+                my_type = Typing(module.comp_ctx).eval(type)
+            else:
+                my_type = tc_state.new_var()
+            tc_state.unify(my_type, bound_t)
+            body_e, body_t = module.eval(body)
+            my_exp = (sexpr.block_k, (sexpr.set_k, me, bound_e), body_e)
+            return my_exp, body_t
+
+    
+
