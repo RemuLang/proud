@@ -4,5 +4,5 @@ pprint(parse("""
 let x = 1
 let b = 2
 type a
-let f = | a or b | => 1
+let rec f = 1 + a * c / 3
 """))

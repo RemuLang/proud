@@ -1,0 +1,8 @@
+module IO
+    let buffer = new type in
+    let stdout: buffer = coerce 0 in
+    = {
+       buffer = type
+    ,  stdout : buffer
+    }
+

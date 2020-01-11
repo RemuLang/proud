@@ -13,8 +13,6 @@ W \s+
 %ignore COMMENT
 
 
-%require stmt_k
-%require expr_k
 %require let_k
 %require type_k
 %require and_k
