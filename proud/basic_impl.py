@@ -2,21 +2,20 @@ from proud import composable_evaluator as ce
 from proud import sexpr, excs
 from proud.scope import Scope, Sym
 from proud import types
-from hybridts.tc_state import TCState
+from hybridts.tc_state import TCState, TransactionMap
 from hybridts import type_encoding as te
 from collections import namedtuple
 from contextlib import contextmanager
 import typing
 
 
-class CompilerCtx(
-        namedtuple("CompilerCtx",
-                   ["scope", "tc_state", "tenv", "filename", "path"])):
+class CompilerCtx(namedtuple("CompilerCtx", ["scope", "tc_state", "tenv", "filename", "path"])):
     scope: Scope
     tc_state: TCState
     tenv: typing.Dict[Sym, te.T]
     filename: str
     path: str
+    tpairs_to_lift: typing.List[typing.Tuple[typing.Any, te.T, te.T]]
 
     def type_of_value(self, sym: Sym):
         return self.tenv[sym]
@@ -65,11 +64,9 @@ class Modular(ce.Eval_module):
             block_outside.append((sexpr.set_k, mod_record_sym, None))
 
         with keep(module_eval):
-
             path = '{}.{}'.format(prev_comp_ctx.path, name)
             scope_inside = prev_comp_ctx.scope.sub_scope(hold_bound=True)
-            comp_ctx = module_eval.comp_ctx = CompilerCtx(
-                scope_inside, tc_state, tenv, filename, path)
+            comp_ctx = module_eval.comp_ctx = CompilerCtx(scope_inside, tc_state, tenv, filename, path)
 
             exprs = []
             for stmt in stmts:
@@ -92,19 +89,16 @@ class Modular(ce.Eval_module):
                 block_inside.append((sexpr.unloc, loc))
                 block_inside.append((sexpr.set_k, sym_typename, nom_typename))
 
-                tenv[sym_typename] = types.type_app(types.type_type,
-                                                    nom_typename)
+                tenv[sym_typename] = types.type_app(types.type_type, nom_typename)
 
             syms = scope_inside.get_newest_bounds()
             # module is a record
-            mod_expr = (sexpr.record_k, tuple(
-                (s.name, s.name) for s in syms), None)
+            mod_expr = (sexpr.record_k, tuple((s.name, s.name) for s in syms), None)
             exprs.reverse()
             for expr in exprs:
                 mod_expr = (*expr, mod_expr)
 
-            mod_row = te.row_from_list([(s.name, tenv[s]) for s in syms],
-                                       te.empty_row)
+            mod_row = te.row_from_list([(s.name, tenv[s]) for s in syms], te.empty_row)
             mod_record = types.record(mod_row)
             tenv[mod_record_sym] = mod_record
             mod_lowered_expr = Express(comp_ctx).eval(mod_expr)
@@ -113,21 +107,16 @@ class Modular(ce.Eval_module):
         if not is_rec:
             mod_record_sym = prev_comp_ctx.scope.enter(name)
 
-        block_outside.append((sexpr.set_k, mod_record_sym,
-                              (sexpr.block_k, tuple(block_inside))))
+        block_outside.append((sexpr.set_k, mod_record_sym, (sexpr.block_k, tuple(block_inside))))
         return sexpr.block_k, tuple(block_outside)
 
 
 type_map = {
-    int: types.bigint_t,
-    str: types.string_t,
-    float: types.float_t,
-    complex: types.complex_t
+    int: types.bigint_t, str: types.string_t, float: types.float_t, complex: types.complex_t
 }
 
 
-class Typing(ce.Eval_forall, ce.Eval_arrow, ce.Eval_imply, ce.Eval_tuple,
-             ce.Eval_record, ce.Eval_list):
+class Typing(ce.Eval_forall, ce.Eval_exist, ce.Eval_arrow, ce.Eval_imply, ce.Eval_tuple, ce.Eval_record, ce.Eval_list):
     def record(module, pairs, row):
         if row:
             row_t = te.poly_row(module.eval(row))
@@ -165,16 +154,28 @@ class Typing(ce.Eval_forall, ce.Eval_arrow, ce.Eval_imply, ce.Eval_tuple,
         return types.arrow(arg, ret)
 
     def forall(module, fresh_vars: typing.Tuple[str, ...], polytype):
-        fresh_vars_ = frozenset(fresh_vars)
-        if len(fresh_vars_) is not len(fresh_vars):
-            raise excs.DuplicatedForallVar(fresh_vars_)
+        fresh_vars_ = set(fresh_vars)
+        if len(fresh_vars_) != len(fresh_vars):
+            raise excs.DuplicatedNamedTypeVar(fresh_vars_)
         fresh_vars = fresh_vars_
+
         for n in fresh_vars:
             var = module.comp_ctx.scope.enter(n)
-            module.comp_ctx.tenv[var] = types.type_app(types.type_type,
-                                                       types.fresh(n))
+            module.comp_ctx.tenv[var] = types.type_app(types.type_type, types.fresh(n))
 
-        return types.forall(fresh_vars, module.eval(polytype))
+        return te.mk_forall(fresh_vars_, module.eval(polytype))
+
+    def exist(module, bound_vars: tuple, monotype):
+        bound_vars_ = set(bound_vars)
+        if len(bound_vars) != len(bound_vars_):
+            raise excs.DuplicatedNamedTypeVar(bound_vars_)
+        bound_vars = bound_vars_
+        tc_state = module.comp_ctx.tc_state
+        for n in bound_vars:
+            var = module.comp_ctx.scope.enter(n)
+            module.comp_ctx.tenv[var] = types.type_app(types.type_type, tc_state.new_var())
+
+        return module.eval(monotype)
 
     def eval(self, x):
         if isinstance(x, Sym):
@@ -189,13 +190,19 @@ class Typing(ce.Eval_forall, ce.Eval_arrow, ce.Eval_imply, ce.Eval_tuple,
         self.comp_ctx = comp_ctx
 
 
-class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
-              ce.Eval_binary, ce.Eval_list, ce.Eval_tuple, ce.Eval_record,
-              ce.Eval_call, ce.Eval_attr, ce.Eval_quote):
+class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate, ce.Eval_binary, ce.Eval_list, ce.Eval_tuple,
+              ce.Eval_record, ce.Eval_call, ce.Eval_attr, ce.Eval_quote):
     def call(module, f, arg):
+        loc, f = sexpr.unloc(f)
+        tc_state = module.comp_ctx.tc_state
         f_e, f_t = module.eval(f)
         arg_e, arg_t = module.eval(arg)
-
+        f_t_ = tc_state.inst(f_t)
+        arg_t_ = tc_state.inst(arg_t)
+        ret_t_ = tc_state.new_var()
+        inst_arrow = te.mk_arrow(arg_t_, ret_t_)
+        tc_state.unify(f_t_, inst_arrow)
+        module.comp_ctx.tpairs_to_lift.append((loc, inst_arrow, ))
 
     def lam(module, arg, type, ret):
         loc, name = sexpr.unloc(arg)
@@ -208,8 +215,7 @@ class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
         path = prev_comp_ctx.path
         with keep(module):
             arg_e = sub_scope.enter(name)
-            module.comp_ctx = CompilerCtx(sub_scope, tc_state, tenv, filename,
-                                          path)
+            module.comp_ctx = CompilerCtx(sub_scope, tc_state, tenv, filename, path)
             if type:
                 arg_t = Typing(module.comp_ctx).eval(type)
             else:
@@ -221,7 +227,6 @@ class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
             me = sexpr.func_k, name, filename, freevars, arg_e, ret_e
             return me, my_type
 
-
     def let(module, is_rec, name, type, bound, body):
         loc, name = sexpr.unloc(name)
         _, type = sexpr.unloc(type)
@@ -230,9 +235,7 @@ class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
         tenv = prev_comp_ctx.tenv
         sub_scope = module.comp_ctx.scope.sub_scope(hold_bound=False)
         with keep(module):
-            module.comp_ctx = CompilerCtx(sub_scope, tc_state, tenv,
-                                          prev_comp_ctx.filename,
-                                          prev_comp_ctx.path)
+            module.comp_ctx = CompilerCtx(sub_scope, tc_state, tenv, prev_comp_ctx.filename, prev_comp_ctx.path)
             if is_rec:
                 me = sub_scope.enter(name)
                 bound_e, bound_t = module.eval(bound)
@@ -246,8 +249,7 @@ class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
                 my_type = tc_state.new_var()
             tc_state.unify(my_type, bound_t)
             body_e, body_t = module.eval(body)
-            my_exp = (sexpr.loc_k, loc, (sexpr.block_k, (sexpr.set_k, me,
-                                                         bound_e), body_e))
+            my_exp = (sexpr.loc_k, loc, (sexpr.block_k, (sexpr.set_k, me, bound_e), body_e))
             return my_exp, body_t
 
     def __init__(self, comp_ctx: CompilerCtx):

@@ -268,12 +268,12 @@ dispatcher[forall_k] = forall
 
 class Eval_exist(Protocol):
     @abc.abstractmethod
-    def exist(module, bound_vars: builtins.tuple, monotypecd):
+    def exist(module, bound_vars: builtins.tuple, monotype):
         ...
 
 
-def exist(bound_vars: builtins.tuple, monotypecd):
-    return lambda module: module.exist(bound_vars, monotypecd)
+def exist(bound_vars: builtins.tuple, monotype):
+    return lambda module: module.exist(bound_vars, monotype)
 
 
 dispatcher[exist_k] = exist

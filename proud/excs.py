@@ -1,4 +1,4 @@
-class DuplicatedForallVar(Exception):
+class DuplicatedNamedTypeVar(Exception):
     def __init__(self, vars):
         self.vars = vars
 
