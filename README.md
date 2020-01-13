@@ -45,7 +45,6 @@ A : {auto: forall a. a -> a, a.A.my_type: <value> <a.A.my_type from a.prd, line 
 ```
 
 The LHS names are just the name of a type variable's string representation, so they're not unique.
-Say, we can say there're 3 `a` in above output, they're bounded type variables during the inference.
+Say, we can see there're 3 `a`s in above output, they're bounded type variables during the inference.
 
-and it has a unique representation during
-the compilation. 
+Moreover, those names actually have unique representations during the compilation. 
