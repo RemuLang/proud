@@ -10,7 +10,7 @@ Hope we can see a to-Python compiler in one day :)
 - Modules as records!
 - Type holes(use `exist a. a` to create a scoped type variable for completing types for you)
 - Implicit inference(only first class polymorphisms need manually annotations)
-
+- Customizing operators' precedence and associativity(it's safe, because if you don't have to open a module globally), by [Remu-Operator](https://github.com/RemuLang/remu-operator).
 
 ## Overview
 
