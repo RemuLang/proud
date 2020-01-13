@@ -1,10 +1,7 @@
-# Steps
+# Notes
 
 ## Step0: Code Gen Phase
 
-```shell script
-SExpr ::= (let_k Sym SExpr)
-```
   
 ## Step1: A minimal core language
 
@@ -13,5 +10,10 @@ SExpr ::= (let_k Sym SExpr)
 - type definition: Only `type a` is allowed, no `ADT` syntax.
 
 Other language features and constructs are implemented.
-  
+
+P.S: It seems also a bit time-consuming.
+
+We don't implement `open` statements now.
+
+ 
 

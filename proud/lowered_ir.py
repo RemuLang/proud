@@ -132,10 +132,17 @@ class WrapLoc:
 class Tuple:
     elts: t.List['Expr']
 
+# @derive.post_visitor(lambda _, __, s: s == 'Expr')
+# @derive.pre_visitor(lambda _, __, s: s == 'Expr')
+
+@dataclass
+class Coerce:
+    target: 'Expr'
+
 
 BaseExpr = t.Union[Fun, Switch, Goto, GotoIf, GotoIfNot, Label, Project,
                    Invoke, WrapLoc, Block, Set, Instance, Const, Loc,
-                   scope.Sym, Tuple]
+                   scope.Sym, Tuple, Coerce]
 
 
 @derive.post_visitor(lambda _, __, s: s == BaseExpr)

@@ -12,6 +12,7 @@ W \s+
 %ignore W
 %ignore COMMENT
 
+%require coerce_k
 %require module_k
 %require def_k
 %require let_k

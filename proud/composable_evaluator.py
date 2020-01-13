@@ -6,6 +6,19 @@ from typing_extensions import Protocol
 dispatcher = {}
 
 
+class Eval_coerce(Protocol):
+    @abc.abstractmethod
+    def coerce(module, expr):
+        ...
+
+
+def coerce(expr):
+    return lambda module: module.coerce(expr)
+
+
+dispatcher[coerce_k] = coerce
+
+
 class Eval_define(Protocol):
     @abc.abstractmethod
     def define(module, export, gname, type, bound):

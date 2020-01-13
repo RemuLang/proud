@@ -53,12 +53,6 @@ class Var(te.Var):
                                 show_loc(filename=self.filename, loc=self.loc))
 
 
-def forall(ns: typing.FrozenSet[str], polytype: te.T, loc=None, filename=None):
-    loc = loc or '<unknown>'
-    filename = filename or '<unknown>'
-    return te.normalize_forall(ForallScope(loc, filename), ns, polytype)
-
-
 def fresh(n: str):
     return te.UnboundFresh(n)
 
