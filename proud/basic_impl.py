@@ -321,6 +321,8 @@ class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
         raise NotImplementedError
 
     def tuple(module, elts):
+        if len(elts) is 1:
+            return module.eval(elts[0])
         raise NotImplementedError
 
     def list(module, elts):
