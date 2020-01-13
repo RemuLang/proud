@@ -7,16 +7,18 @@ from prettyprinter import pprint as pp, install_extras
 install_extras()
 mod = parse("""
 module A
-let x = 1
 let b = 2
 type a
+let x = | x | -> x
 """)
 pprint(mod)
 
 _, loc, mod = mod
 comp_ctx = CompilerCtx.top('a.prd', 'a')
 modular = Modular(comp_ctx)
-pp(modular.loc(loc, mod))
+xs = modular.loc(loc, mod)
+
+
 
 
 

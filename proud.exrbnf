@@ -74,8 +74,7 @@ case : '|' pat '->' expr { loc_((case_k, $1, $3), $2)  };
 
 lambda : pat lambda_typed lambda_body { (lambda_k, $0, $1, $2) };
 
-lambda_body : '=>' expr { loc_((imply_k, $1), $0) }
-            | '->' expr { loc_((arrow_k, $1), $0) }
+lambda_body : '->' expr { loc_($1, $0) }
             ;
 
 lambda_typed : ':' type '|' {  $1  }
