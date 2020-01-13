@@ -5007,7 +5007,7 @@ def mk_parser(let_k, type_k, and_k, or_k, quote_k, unquote_k, lambda_k, match_k,
                     lcl_3 = lcl_3
                     _slot_2 = lcl_3
                     lcl_3 = _slot_1
-                    lcl_4 = _slot_3
+                    lcl_4 = _slot_2
                     lcl_3 = (module__k, lcl_3, lcl_4)
                     lcl_4 = _slot_0
                     lcl_3 = loc__(lcl_3, lcl_4)

@@ -58,6 +58,8 @@ def unloc(e):
 
 ## Lowered
 set_k = ASTTag("set", ["sym", "expr"])
+inst_k = ASTTag("inst", ["type", "scope", "expr"])
+typed_k = ASTTag("typed", ["type", "expr"])
 func_k = ASTTag("func", ["name", "filename", "freevars", "arg", "expr"])
 invoke_k = ASTTag("invoke", ["f", "arg"])
 prj_k = ASTTag("prj", ["expr", "i"])
@@ -71,8 +73,8 @@ block_k = ASTTag("block", ["elts"])
 switch_k = ASTTag("switch", ["target", "cases", "default"])
 
 lowered = [
-    set_k, func_k, invoke_k, prj_k, label_k, goto_if_k, goto_if_not_k,
-    goto_k, indir_k, addr_k, block_k, loc_k, tuple_k, list_k, switch_k
+    set_k, func_k, invoke_k, prj_k, label_k, goto_if_k, goto_if_not_k, goto_k,
+    indir_k, addr_k, block_k, loc_k, tuple_k, list_k, switch_k, type_k, attr_k
 ]
 
 

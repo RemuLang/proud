@@ -3,43 +3,57 @@ import typing
 # (a : type b) implies ((x : a) implies (x : b))
 # for "value as type".
 # This is not achieve in type system, but the compiler.
-type_type = (te.nom_t, "type")
 
 
-def type_app(f: te.T, arg: te.T):
-    return te.app_t, f, arg
+class Nom(te.Nom):
+    def __init__(self, name, loc="Comp", filename="Builtin"):
+        self.name = name
+        self.loc = loc
+        self.filename = filename
+
+    def get_name(self) -> str:
+        return self.name
+
+    def __repr__(self):
+        return '<{} defined at {}, {}>'.format(self.name, self.filename,
+                                               self.loc)
 
 
-def nominal(typename: str):
-    return te.nom_t, typename
+class ForallScope(te.ForallGroup):
+    def __init__(self, loc, filename):
+        self.loc = loc
+        self.filename = filename
+
+    def __repr__(self):
+        return '<forall at {}, {!r}>'.format(self.filename, self.loc)
 
 
-def forall(ns: typing.FrozenSet[str], polytype: te.T):
-    return te.forall_t, ns, polytype
+class Var(te.Var):
+    def __init__(self, loc, filename, name=None, is_rigid=False):
+        self.is_rigid = is_rigid
+        self.name = name or hex(id(self))
+        self.loc = loc
+        self.filename = filename
+
+    def __repr__(self):
+        return '<{} at {}, {!r}>'.format(self.name, self.filename, self.loc)
 
 
-def arrow(arg: te.T, ret: te.T):
-    return te.arrow_t, arg, ret
+def forall(ns: typing.FrozenSet[str], polytype: te.T, loc=None, filename=None):
+    loc = loc or '<unknown>'
+    filename = filename or '<unknown>'
+    return te.normalize_forall(ForallScope(loc, filename), ns, polytype)
 
-
-def imply(arg: te.T, ret: te.T):
-    return te.implicit_t, arg, ret
-
-
-def tuple(*xs: te.T):
-    return (te.tuple_t, *xs)
-
-
-def record(row_t: te.Row) -> te.T:
-    return te.record_t, row_t
 
 def fresh(n: str):
-    return te.fresh_t, n
-
-bigint_t = te.nom_t, "bigint"
-string_t = te.nom_t, "string"
-float_t = te.nom_t, "float"
-list_t = te.nom_t, "list"
-complex_t = te.nom_t, "complex"
+    return te.UnboundFresh(n)
 
 
+type_type = Nom("value")
+
+bigint_t = Nom("bigint")
+string_t = Nom("string")
+float_t = Nom("float")
+list_t = Nom("list")
+complex_t = Nom("complex")
+unit_t = Nom("unit")

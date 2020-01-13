@@ -1,32 +1,37 @@
 from proud import composable_evaluator as ce
-from proud import sexpr, excs
+from proud import excs, sexpr
+from proud import lowered_ir as ir
 from proud.scope import Scope, Sym
 from proud import types
-from hybridts.tc_state import TCState, TransactionMap
+from hybridts.tc_state import TCState
 from hybridts import type_encoding as te
 from collections import namedtuple
 from contextlib import contextmanager
 import typing
 
 
-class CompilerCtx(namedtuple("CompilerCtx", ["scope", "tc_state", "tenv", "filename", "path"])):
+def ignore(expr: ir.BaseExpr) -> ir.Expr:
+    return ir.Expr(type=types.unit_t, expr=expr)
+
+class CompilerCtx(
+        namedtuple("CompilerCtx",
+                   ["scope", "tc_state", "tenv", "filename", "path"])):
     scope: Scope
     tc_state: TCState
     tenv: typing.Dict[Sym, te.T]
     filename: str
     path: str
-    tpairs_to_lift: typing.List[typing.Tuple[typing.Any, te.T, te.T]]
 
     def type_of_value(self, sym: Sym):
         return self.tenv[sym]
 
     def type_of_type(self, sym: Sym) -> te.T:
         t = self.tenv[sym]
-        if t[0] is te.app_t and t[1] is types.type_type:
-            return t[2]
+        if isinstance(t, te.App) and isinstance(t.f, types.type_type):
+            return t.arg
         tcs = self.tc_state
-        what_i_want = tcs.new_var()
-        tcs.unify(t, types.type_app(types.type_type, what_i_want))
+        what_i_want = te.InternalVar(is_rigid=False)
+        tcs.unify(t, te.App(types.type_type, what_i_want))
         return what_i_want
 
     def value_of_type(self, sym: Sym):
@@ -51,20 +56,31 @@ class Modular(ce.Eval_module):
         self.filename = filename
         self.comp_ctx = compiler_ctx
 
-    def module(module_eval, is_rec, name, stmts, filename):
+    def module(module_eval, is_rec, name, stmts, filename, loc=None):
+
         prev_comp_ctx = module_eval.comp_ctx
         tc_state = prev_comp_ctx.tc_state
         tenv = prev_comp_ctx.tenv
 
         mod_record_sym: typing.Optional[Sym] = None
-        block_outside = []
-        block_inside = []
+        block_outside : typing.List[ir.Expr] = []
+        block_inside: typing.List[ir.Expr] = []
+        in_append = block_inside.append
+        in_extend = block_inside.extend
+        out_append = block_outside.append
+
+        path = '{}.{}'.format(prev_comp_ctx.path, name)
+
+        module_type = None
         if is_rec:
             mod_record_sym = prev_comp_ctx.scope.enter(name)
-            block_outside.append((sexpr.set_k, mod_record_sym, None))
-
+            module_type = tenv[mod_record_sym] = types.Var(loc=loc, filename=filename, name=path)
+            out_append(
+                ignore(
+                    ir.Set(mod_record_sym,
+                           ir.Expr(type=types.unit_t, expr=ir.Const(())))))
         with keep(module_eval):
-            path = '{}.{}'.format(prev_comp_ctx.path, name)
+
             scope_inside = prev_comp_ctx.scope.sub_scope(hold_bound=True)
             comp_ctx = module_eval.comp_ctx = CompilerCtx(scope_inside, tc_state, tenv, filename, path)
 
@@ -84,49 +100,66 @@ class Modular(ce.Eval_module):
                     # type alias
                     nom_typename = Typing(comp_ctx).eval(typedef)
                 else:
-                    nom_typename = tc_state.mk_new_type(typename)
+                    nom_typename = types.Nom(typename,
+                                             loc=loc,
+                                             filename=filename)
 
-                block_inside.append((sexpr.unloc, loc))
-                block_inside.append((sexpr.set_k, sym_typename, nom_typename))
+                in_append(ignore(ir.Loc(loc)))
 
-                tenv[sym_typename] = types.type_app(types.type_type, nom_typename)
+                in_append(
+                    ignore(
+                        ir.Set(
+                            sym_typename,
+                            ir.Expr(type=nom_typename,
+                                    expr=ir.Const(nom_typename)))))
+
+                tenv[sym_typename] = te.App(types.type_type, nom_typename)
 
             syms = scope_inside.get_newest_bounds()
             # module is a record
-            mod_expr = (sexpr.record_k, tuple((s.name, s.name) for s in syms), None)
-            exprs.reverse()
-            for expr in exprs:
-                mod_expr = (*expr, mod_expr)
+            expr_eval = Express(comp_ctx)
+            in_extend(map(expr_eval.eval, exprs))
 
-            mod_row = te.row_from_list([(s.name, tenv[s]) for s in syms], te.empty_row)
-            mod_record = types.record(mod_row)
-            tenv[mod_record_sym] = mod_record
-            mod_lowered_expr = Express(comp_ctx).eval(mod_expr)
-            block_inside.append(mod_lowered_expr)
+            mod_row = te.row_from_list([(s.name, tenv[s]) for s in syms],
+                                       te.empty_row)
+            if module_type:
+                tc_state.unify(module_type, te.Record(mod_row))
+            else:
+                module_type = te.Record(mod_row)
+            in_append(ir.Expr(type=module_type, expr=ir.Tuple(list(syms))))
 
         if not is_rec:
             mod_record_sym = prev_comp_ctx.scope.enter(name)
+            tenv[mod_record_sym] = module_type
 
-        block_outside.append((sexpr.set_k, mod_record_sym, (sexpr.block_k, tuple(block_inside))))
-        return sexpr.block_k, tuple(block_outside)
+        out_append(
+            ignore(
+                ir.Set(mod_record_sym,
+                       ir.Expr(type=module_type,
+                               expr=ir.Block(block_inside)))))
+        return ir.Expr(type=module_type, expr=ir.Block(block_outside))
 
 
 type_map = {
-    int: types.bigint_t, str: types.string_t, float: types.float_t, complex: types.complex_t
+    int: types.bigint_t,
+    str: types.string_t,
+    float: types.float_t,
+    complex: types.complex_t
 }
 
 
-class Typing(ce.Eval_forall, ce.Eval_exist, ce.Eval_arrow, ce.Eval_imply, ce.Eval_tuple, ce.Eval_record, ce.Eval_list):
+class Typing(ce.Eval_forall, ce.Eval_exist, ce.Eval_arrow, ce.Eval_imply,
+             ce.Eval_tuple, ce.Eval_record, ce.Eval_list, ce.Eval_loc):
     def record(module, pairs, row):
         if row:
-            row_t = te.poly_row(module.eval(row))
+            row_t = te.RowPoly(module.eval(row))
 
         else:
             row_t = te.empty_row
 
         fields = [(k, module.eval(v)) for k, v in pairs]
         row_t = te.row_from_list(fields, row_t)
-        return types.record(row_t)
+        return te.Record(row_t)
 
     def list(module, elts):
         list_t = types.list_t
@@ -136,44 +169,48 @@ class Typing(ce.Eval_forall, ce.Eval_exist, ce.Eval_arrow, ce.Eval_imply, ce.Eva
         try:
             [a] = elts
             list_elt_type = module.eval(a)
-            return types.type_app(list_t, list_elt_type)
+            return te.App(list_t, list_elt_type)
         except ValueError:
             raise excs.InvalidListType("List of {}".format(elts))
 
     def tuple(module, elts):
-        return types.tuple(*map(module.eval, elts))
+        return te.Tuple(tuple(map(module.eval, elts)))
 
     def imply(module, arg, ret):
         arg = module.eval(arg)
         ret = module.eval(ret)
-        return types.imply(arg, ret)
+        return te.Implicit(arg, ret)
 
     def arrow(module, arg, ret):
         arg = module.eval(arg)
         ret = module.eval(ret)
-        return types.arrow(arg, ret)
+        return te.Arrow(arg, ret)
 
-    def forall(module, fresh_vars: typing.Tuple[str, ...], polytype):
-        fresh_vars_ = set(fresh_vars)
-        if len(fresh_vars_) != len(fresh_vars):
+    def forall(module, unbound_fresh_decls: typing.Tuple[str, ...], polytype):
+        fresh_vars_ = set(unbound_fresh_decls)
+        if len(fresh_vars_) != len(unbound_fresh_decls):
             raise excs.DuplicatedNamedTypeVar(fresh_vars_)
-        fresh_vars = fresh_vars_
+        unbound_fresh_decls = fresh_vars_
 
-        for n in fresh_vars:
+        forall_scope = types.ForallScope(module._loc, module.comp_ctx.filename)
+        fresh_vars = []
+        for n in unbound_fresh_decls:
             var = module.comp_ctx.scope.enter(n)
-            module.comp_ctx.tenv[var] = types.type_app(types.type_type, types.fresh(n))
+            fresh_var = te.Fresh(n, forall_scope)
+            fresh_vars.append(fresh_var)
+            module.comp_ctx.tenv[var] = te.App(types.type_type, fresh_var)
 
-        return te.mk_forall(fresh_vars_, module.eval(polytype))
+        return te.Forall(forall_scope, tuple(fresh_vars), module.eval(polytype))
 
     def exist(module, bound_vars: tuple, monotype):
         bound_vars_ = set(bound_vars)
         if len(bound_vars) != len(bound_vars_):
             raise excs.DuplicatedNamedTypeVar(bound_vars_)
         bound_vars = bound_vars_
-        tc_state = module.comp_ctx.tc_state
         for n in bound_vars:
             var = module.comp_ctx.scope.enter(n)
-            module.comp_ctx.tenv[var] = types.type_app(types.type_type, tc_state.new_var())
+            tvar = types.Var(module._loc, module.comp_ctx.filename)
+            module.comp_ctx.tenv[var] = te.App(types.type_type, tvar)
 
         return module.eval(monotype)
 
@@ -186,27 +223,92 @@ class Typing(ce.Eval_forall, ce.Eval_exist, ce.Eval_arrow, ce.Eval_imply, ce.Eva
 
         raise ValueError(x)
 
+    def loc(module, location, contents):
+        module._loc = location
+        return module.eval(contents)
+
     def __init__(self, comp_ctx: CompilerCtx):
         self.comp_ctx = comp_ctx
+        self._loc = None
 
 
-class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate, ce.Eval_binary, ce.Eval_list, ce.Eval_tuple,
-              ce.Eval_record, ce.Eval_call, ce.Eval_attr, ce.Eval_quote):
+class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
+              ce.Eval_binary, ce.Eval_list, ce.Eval_tuple, ce.Eval_record,
+              ce.Eval_call, ce.Eval_attr, ce.Eval_quote, ce.Eval_loc):
+    def loc(module, location, contents):
+        module._loc = location
+        a = module.eval(contents)
+        return ir.Expr(type=a.type, expr=ir.WrapLoc(location, a))
+
     def call(module, f, arg):
         loc, f = sexpr.unloc(f)
         tc_state = module.comp_ctx.tc_state
-        f_e, f_t = module.eval(f)
-        arg_e, arg_t = module.eval(arg)
-        f_t_ = tc_state.inst(f_t)
-        arg_t_ = tc_state.inst(arg_t)
-        ret_t_ = tc_state.new_var()
-        inst_arrow = te.mk_arrow(arg_t_, ret_t_)
-        tc_state.unify(f_t_, inst_arrow)
-        module.comp_ctx.tpairs_to_lift.append((loc, inst_arrow, ))
+        f = module.eval(f)
+        arg = module.eval(arg)
+
+        paths_of_argt, freshs_of_argt, [arg_t] = tc_state.inst_with_fresh_map(arg.type)
+        ret_t = types.Var(module._loc, module.comp_ctx.filename,name="ret")
+        paths_of_ft, freshs_of_ft, [f_t] = tc_state.inst_with_fresh_map(f.type)
+
+        # type class
+        arg_inst = None
+        if isinstance(arg_t, te.Implicit):
+            arg_inst = arg_t.witness
+            arg_t = arg_t.type
+
+        f_inst = None
+        if isinstance(f_t, te.Implicit):
+            f_inst = f_t.witness
+            f_t = f_t.type
+
+        is_generalised = False
+        if paths_of_argt and paths_of_ft:
+            # e.g.,
+            # forall a b. a -> b
+            # forall a. (int -> a) -> a -> forall b. (int -> b) -> b
+            # forall b.  b
+            if freshs_of_ft and isinstance(f_t, te.Arrow):
+                inst_arrow = te.Arrow(arg_t, ret_t)
+                tc_state.unify(inst_arrow, f_t)
+                gen_map = {}
+                forall_scope = types.ForallScope(module._loc, module.comp_ctx.filename)
+                for path, fresh in zip(paths_of_argt, freshs_of_argt):
+                    _, token = tc_state.path_infer(path)
+                    if not isinstance(token, te.Var):
+                        continue
+                    if not gen_map.get(token):
+                        gen_map[token] = te.Fresh(fresh.name, forall_scope)
+
+                if gen_map:
+                    is_generalised = True
+                    fresh_vars = tuple(gen_map.values())
+
+                    def subst_and_unify(_, t: te.T):
+                        return (), gen_map.get(t, t)
+
+                    ret_t = te.pre_visit(subst_and_unify)((), ret_t)
+                    arg_t = te.pre_visit(subst_and_unify)((), arg_t)
+                    f_t = te.pre_visit(subst_and_unify)((), f_t)
+
+                    arg_t = te.Forall(forall_scope, fresh_vars, arg_t)
+                    arg.type = te.Forall(forall_scope, fresh_vars, f_t)
+                    arg.type = te.Forall(forall_scope, fresh_vars, ret_t)
+
+        if not is_generalised:
+            inst_arrow = te.Arrow(arg_t, ret_t)
+            tc_state.unify(inst_arrow, f_t)
+
+        if f_inst:
+            f = ir.Instance(f_inst, module.comp_ctx.scope, f)
+
+        if arg_inst:
+            arg = ir.Instance(arg_inst, module.comp_ctx.scope, arg)
+
+        return ir.Expr(type=ret_t, expr=ir.Invoke(f, arg))
+
 
     def lam(module, arg, type, ret):
         loc, name = sexpr.unloc(arg)
-        _, type = sexpr.unloc(type)
         prev_comp_ctx = module.comp_ctx
         tc_state = prev_comp_ctx.tc_state
         tenv = prev_comp_ctx.tenv
@@ -215,50 +317,64 @@ class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate, ce.Eval
         path = prev_comp_ctx.path
         with keep(module):
             arg_e = sub_scope.enter(name)
-            module.comp_ctx = CompilerCtx(sub_scope, tc_state, tenv, filename, path)
+            module.comp_ctx = CompilerCtx(sub_scope, tc_state, tenv, filename,
+                                          path)
             if type:
                 arg_t = Typing(module.comp_ctx).eval(type)
             else:
-                arg_t = tc_state.new_var()
-            ret_e, ret_t = module.eval(ret)
-            my_type = types.arrow(arg_t, ret_t)
-            freevars = tuple(sub_scope.freevars.values())
-            name = "{}.lambda".format(path)
-            me = sexpr.func_k, name, filename, freevars, arg_e, ret_e
-            return me, my_type
+                arg_t = types.Var(loc, filename, name=name + '\'t')
+
+            ret = module.eval(ret)
+            my_type = te.Arrow(arg_t, ret.type)
+            freevars = list(sub_scope.freevars.values())
+            name = "{} |{}|".format(path, name)
+            me = ir.Fun(name, filename, freevars, arg_e, ret)
+            return ir.Expr(type=my_type, expr=me)
 
     def let(module, is_rec, name, type, bound, body):
         loc, name = sexpr.unloc(name)
-        _, type = sexpr.unloc(type)
         prev_comp_ctx = module.comp_ctx
         tc_state = prev_comp_ctx.tc_state
         tenv = prev_comp_ctx.tenv
         sub_scope = module.comp_ctx.scope.sub_scope(hold_bound=False)
         with keep(module):
-            module.comp_ctx = CompilerCtx(sub_scope, tc_state, tenv, prev_comp_ctx.filename, prev_comp_ctx.path)
+            module.comp_ctx = CompilerCtx(sub_scope, tc_state, tenv,
+                                          prev_comp_ctx.filename,
+                                          prev_comp_ctx.path)
             if is_rec:
                 me = sub_scope.enter(name)
-                bound_e, bound_t = module.eval(bound)
+                bound = module.eval(bound)
             else:
-                bound_e, bound_t = module.eval(bound)
+                bound = module.eval(bound)
                 me = sub_scope.enter(name)
 
             if type:
                 my_type = Typing(module.comp_ctx).eval(type)
             else:
-                my_type = tc_state.new_var()
-            tc_state.unify(my_type, bound_t)
-            body_e, body_t = module.eval(body)
-            my_exp = (sexpr.loc_k, loc, (sexpr.block_k, (sexpr.set_k, me, bound_e), body_e))
-            return my_exp, body_t
+                my_type = types.Var(loc, prev_comp_ctx.filename, name=name)
+
+            # TODO: instantiate and generalise like function application
+            tc_state.unify(my_type, bound.type)
+            body = module.eval(body)
+
+            my_exp = ir.Block([
+                ignore(ir.Loc(loc)),
+                ignore(ir.Set(me, bound)),
+                body
+            ])
+            return ir.Expr(type=my_type, expr=my_exp)
 
     def __init__(self, comp_ctx: CompilerCtx):
         self.comp_ctx = comp_ctx
+        self._loc = None
 
-    def eval(self, x):
+    def eval(self, x) -> ir.Expr:
         if sexpr.is_ast(x):
             hd, *args = x
             return ce.dispatcher[hd](*args)(self)
         if isinstance(x, Sym):
-            return x, self.comp_ctx.type_of_value(x)
-        return x, type_map[type(x)]
+            my_type = self.comp_ctx.type_of_value(x)
+            return ir.Expr(type=my_type, expr=x)
+
+        my_type = type_map[type(x)]
+        return ir.Expr(type=my_type, expr=ir.Const(x))

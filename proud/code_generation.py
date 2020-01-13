@@ -16,7 +16,8 @@ class Numbering(dict):
 class Codegen(ce.Eval_set, ce.Eval_func, ce.Eval_invoke, ce.Eval_loc,
               ce.Eval_prj, ce.Eval_label, ce.Eval_goto, ce.Eval_goto_if,
               ce.Eval_goto_if_not, ce.Eval_indir, ce.Eval_addr, ce.Eval_block,
-              ce.Eval_tuple, ce.Eval_list, ce.Eval_switch):
+              ce.Eval_tuple, ce.Eval_list, ce.Eval_switch, ce.Eval_typed,
+              ce.Eval_attr):
     def __init__(self):
         self.code = []
         self.layout = 0
@@ -121,3 +122,12 @@ class Codegen(ce.Eval_set, ce.Eval_func, ce.Eval_invoke, ce.Eval_loc,
             module("| {} => {}".format(i, n))
         if default:
             module("| _ => {}".format(default))
+
+    def typed(module, type, expr):
+        """
+        specific for row records
+        """
+        raise NotImplementedError
+
+    def attr(module, base, attr_name: str):
+        raise NotImplementedError

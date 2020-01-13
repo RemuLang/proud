@@ -371,6 +371,32 @@ def set(sym, expr):
 dispatcher[set_k] = set
 
 
+class Eval_inst(Protocol):
+    @abc.abstractmethod
+    def inst(module, type, scope, expr):
+        ...
+
+
+def inst(type, scope, expr):
+    return lambda module: module.inst(type, scope, expr)
+
+
+dispatcher[inst_k] = inst
+
+
+class Eval_typed(Protocol):
+    @abc.abstractmethod
+    def typed(module, type, expr):
+        ...
+
+
+def typed(type, expr):
+    return lambda module: module.typed(type, expr)
+
+
+dispatcher[typed_k] = typed
+
+
 class Eval_func(Protocol):
     @abc.abstractmethod
     def func(module, name, filename, freevars, arg, expr):
