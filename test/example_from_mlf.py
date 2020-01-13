@@ -4,10 +4,9 @@ from proud.basic_impl import Modular, CompilerCtx
 # install_extras()
 mod = parse("""
 module MyMod
-let mid: forall b. b = coerce 0
-let x : forall a. a -> a = mid
-
-
+export auto : forall a. a -> a = | x | -> x
+let choose: forall a. a -> a -> a = | x | -> | y | -> x
+let res = choose auto
 """)
 comp_ctx = CompilerCtx.top('a.prd', 'a')
 modular = Modular(comp_ctx)
@@ -16,4 +15,3 @@ tc = comp_ctx.tc_state
 
 for k, v in comp_ctx.tenv.items():
     print(k.name, ':', tc.infer(v), '============', v)
-
