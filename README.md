@@ -1,4 +1,18 @@
-## Proud Programming Language
+# Proud Programming Language
+
+Hope we can see a to-Python compiler in one day :)
+ 
+## Feature
+
+- Row polymorphisms(Extensible Records)! 
+- First class polymorphisms!
+- Type classes/traits!
+- Modules as records!
+- Type holes(use `exist a. a` to create a scoped type variable for completing types for you)
+- Implicit inference(only first class polymorphisms need manually annotations)
+
+
+## Overview
 
 Currently, the strong type system is finished.
 
