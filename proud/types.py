@@ -10,7 +10,7 @@ compiler_builtin_file = object()
 def show_loc(filename, loc):
     if filename is compiler_builtin_file:
         return ''
-    s = 'from {}'.format(filename)
+    s = ' from {}'.format(filename)
     if loc:
         s = '{}, line {}, col {}'.format(s, loc[0], loc[1])
     return s
@@ -19,7 +19,7 @@ def show_loc(filename, loc):
 
 
 class Nom(te.Nom):
-    def __init__(self, name, loc=None, filename=None):
+    def __init__(self, name, loc=None, filename=compiler_builtin_file):
         self.name = name
         self.loc = loc
         self.filename = filename
@@ -29,7 +29,7 @@ class Nom(te.Nom):
 
     def __repr__(self):
 
-        return '<{} {}>'.format(self.name, show_loc(loc=self.loc, filename=self.filename))
+        return '<{}{}>'.format(self.name, show_loc(loc=self.loc, filename=self.filename))
 
 
 class ForallScope(te.ForallGroup):
@@ -38,7 +38,7 @@ class ForallScope(te.ForallGroup):
         self.filename = filename
 
     def __repr__(self):
-        return '<forall {}>'.format(show_loc(loc=self.loc, filename=self.filename))
+        return '<forall{}>'.format(show_loc(loc=self.loc, filename=self.filename))
 
 
 class Var(te.Var):
@@ -49,7 +49,7 @@ class Var(te.Var):
         self.filename = filename
 
     def __repr__(self):
-        return '<{} {}>'.format(self.name,
+        return '<{}{}>'.format(self.name,
                                 show_loc(filename=self.filename, loc=self.loc))
 
 

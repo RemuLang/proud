@@ -7,7 +7,6 @@ from hybridts.tc_state import TCState
 from hybridts import type_encoding as te
 from collections import namedtuple
 from contextlib import contextmanager
-from functools import reduce
 import typing
 
 
@@ -29,7 +28,7 @@ class CompilerCtx(
 
     def type_of_type(self, sym: Sym) -> te.T:
         t = self.tenv[sym]
-        if isinstance(t, te.App) and isinstance(t.f, types.type_type):
+        if isinstance(t, te.App) and t.f is types.type_type:
             return t.arg
         tcs = self.tc_state
         what_i_want = te.InternalVar(is_rigid=False)
@@ -76,18 +75,24 @@ class Modular(ce.Eval_module, ce.Eval_loc, ce.Eval_define):
         prev_comp_ctx = module.comp_ctx
         tc_state = prev_comp_ctx.tc_state
         tenv = prev_comp_ctx.tenv
-        sub_scope = module.comp_ctx.scope.sub_scope(hold_bound=False)
+        scope = module.comp_ctx.scope
+        sub_scope = scope.sub_scope()
+        me = (scope.require if export else scope.shadow)(name)
+        bound = module.eval(bound)
         with keep(module):
             module.comp_ctx = CompilerCtx(sub_scope, tc_state, tenv, prev_comp_ctx.filename, prev_comp_ctx.path)
-            me = (sub_scope.require if export else sub_scope.shadow)(name)
-            bound = module.eval(bound)
             if type:
                 my_type = Typing(module.comp_ctx).eval(type)
+                if isinstance(my_type, te.Forall):
+                    my_type_for_unify = my_type.poly_type
+                if isinstance(my_type, te.Implicit):
+                    my_type_for_unify = my_type.type
             else:
-                my_type = types.Var(loc, prev_comp_ctx.filename, name=name)
+                my_type = my_type_for_unify = types.Var(loc, prev_comp_ctx.filename, name=name)
 
+            tenv[me] = my_type
             # TODO: instantiate and generalise like function application
-            tc_state.unify(my_type, bound.type)
+            tc_state.unify(my_type_for_unify, bound.type)
 
             my_exp = ir.Set(me, bound)
             return ir.Expr(type=my_type, expr=my_exp)
@@ -104,8 +109,8 @@ class Modular(ce.Eval_module, ce.Eval_loc, ce.Eval_define):
         in_append = block_inside.append
         in_extend = block_inside.extend
         out_append = block_outside.append
-
         filename = prev_comp_ctx.filename
+        loc, name = sexpr.unloc(name)
         path = '{}.{}'.format(prev_comp_ctx.path, name)
 
         module_type = None
@@ -169,7 +174,11 @@ class Modular(ce.Eval_module, ce.Eval_loc, ce.Eval_define):
                 tc_state.unify(module_type, te.Record(mod_row))
             else:
                 module_type = te.Record(mod_row)
-            in_append(ir.Expr(type=module_type, expr=ir.Tuple(list(syms))))
+            in_append(
+                ir.Expr(type=module_type,
+                        expr=ir.Tuple([
+                            ir.Expr(type=tenv[sym], expr=sym) for sym in syms
+                        ])))
 
         if not is_rec:
             mod_record_sym = prev_comp_ctx.scope.enter(name)
@@ -238,6 +247,7 @@ class Typing(ce.Eval_forall, ce.Eval_exist, ce.Eval_arrow, ce.Eval_imply,
         forall_scope = types.ForallScope(module._loc, module.comp_ctx.filename)
         fresh_vars = []
         for n in unbound_fresh_decls:
+            _, n = sexpr.unloc(n)
             var = module.comp_ctx.scope.enter(n)
             fresh_var = te.Fresh(n, forall_scope)
             fresh_vars.append(fresh_var)
@@ -259,8 +269,8 @@ class Typing(ce.Eval_forall, ce.Eval_exist, ce.Eval_arrow, ce.Eval_imply,
         return module.eval(monotype)
 
     def eval(self, x):
-        if isinstance(x, Sym):
-            return self.comp_ctx.type_of_type(x)
+        if isinstance(x, str):
+            return self.comp_ctx.type_of_type(self.comp_ctx.scope.require(x))
         if sexpr.is_ast(x):
             hd, *args = x
             return ce.dispatcher[hd](*args)(self)
@@ -314,10 +324,9 @@ class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
         f = module.eval(f)
         arg = module.eval(arg)
 
-        paths_of_argt, freshs_of_argt, [arg_t] = tc_state.inst_with_fresh_map(
-            arg.type)
+        paths_of_argt, freshs_of_argt, arg_t = tc_state.inst_with_fresh_map(arg.type)
         ret_t = types.Var(module._loc, module.comp_ctx.filename, name="ret")
-        paths_of_ft, freshs_of_ft, [f_t] = tc_state.inst_with_fresh_map(f.type)
+        paths_of_ft, freshs_of_ft, f_t = tc_state.inst_with_fresh_map(f.type)
 
         # type class
         arg_inst = None
@@ -356,13 +365,17 @@ class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
                     def subst_and_unify(_, t: te.T):
                         return (), gen_map.get(t, t)
 
-                    ret_t = te.pre_visit(subst_and_unify)((), ret_t)
-                    arg_t = te.pre_visit(subst_and_unify)((), arg_t)
-                    f_t = te.pre_visit(subst_and_unify)((), f_t)
+                    ret_t = tc_state.infer(ret_t)
+                    arg_t = tc_state.infer(arg_t)
+                    f_t = tc_state.infer(f_t)
 
-                    arg_t = te.Forall(forall_scope, fresh_vars, arg_t)
-                    arg.type = te.Forall(forall_scope, fresh_vars, f_t)
-                    arg.type = te.Forall(forall_scope, fresh_vars, ret_t)
+                    ret_t = te.pre_visit(subst_and_unify)((), tc_state.infer(ret_t))
+                    arg_t = te.pre_visit(subst_and_unify)((), tc_state.infer(arg_t))
+                    f_t = te.pre_visit(subst_and_unify)((), tc_state.infer(f_t))
+
+                    arg.type = te.Forall(forall_scope, fresh_vars, arg_t)
+                    f.type = te.Forall(forall_scope, fresh_vars, f_t)
+                    ret_t = te.Forall(forall_scope, fresh_vars, ret_t)
 
         if not is_generalised:
             inst_arrow = te.Arrow(arg_t, ret_t)
@@ -392,9 +405,11 @@ class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
                 arg_t = Typing(module.comp_ctx).eval(type)
             else:
                 arg_t = types.Var(loc, filename, name=name + '\'t')
+            tenv[arg_e] = arg_t
 
             ret = module.eval(ret)
             my_type = te.Arrow(arg_t, ret.type)
+
             freevars = list(sub_scope.freevars.values())
             name = "{} |{}|".format(path, name)
             me = ir.Fun(name, filename, freevars, arg_e, ret)
@@ -422,6 +437,8 @@ class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
             else:
                 my_type = types.Var(loc, prev_comp_ctx.filename, name=name)
 
+            tenv[me] = my_type
+
             # TODO: instantiate and generalise like function application
             tc_state.unify(my_type, bound.type)
             body = module.eval(body)
@@ -439,8 +456,9 @@ class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
         if sexpr.is_ast(x):
             hd, *args = x
             return ce.dispatcher[hd](*args)(self)
-        if isinstance(x, Sym):
-            my_type = self.comp_ctx.type_of_value(x)
+
+        if isinstance(x, str):
+            my_type = self.comp_ctx.type_of_value(self.comp_ctx.scope.require(x))
             return ir.Expr(type=my_type, expr=x)
 
         my_type = type_map[type(x)]
