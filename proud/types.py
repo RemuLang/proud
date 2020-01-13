@@ -5,8 +5,21 @@ import typing
 # This is not achieve in type system, but the compiler.
 
 
+compiler_builtin_file = object()
+
+def show_loc(filename, loc):
+    if filename is compiler_builtin_file:
+        return ''
+    s = 'from {}'.format(filename)
+    if loc:
+        s = '{}, line {}, col {}'.format(s, loc[0], loc[1])
+    return s
+
+
+
+
 class Nom(te.Nom):
-    def __init__(self, name, loc="Comp", filename="Builtin"):
+    def __init__(self, name, loc=None, filename=None):
         self.name = name
         self.loc = loc
         self.filename = filename
@@ -15,8 +28,8 @@ class Nom(te.Nom):
         return self.name
 
     def __repr__(self):
-        return '<{} defined at {}, {}>'.format(self.name, self.filename,
-                                               self.loc)
+
+        return '<{} {}>'.format(self.name, show_loc(loc=self.loc, filename=self.filename))
 
 
 class ForallScope(te.ForallGroup):
@@ -25,7 +38,7 @@ class ForallScope(te.ForallGroup):
         self.filename = filename
 
     def __repr__(self):
-        return '<forall at {}, {!r}>'.format(self.filename, self.loc)
+        return '<forall {}>'.format(show_loc(loc=self.loc, filename=self.filename))
 
 
 class Var(te.Var):
@@ -36,7 +49,8 @@ class Var(te.Var):
         self.filename = filename
 
     def __repr__(self):
-        return '<{} at {}, {!r}>'.format(self.name, self.filename, self.loc)
+        return '<{} {}>'.format(self.name,
+                                show_loc(filename=self.filename, loc=self.loc))
 
 
 def forall(ns: typing.FrozenSet[str], polytype: te.T, loc=None, filename=None):

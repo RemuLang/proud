@@ -69,7 +69,7 @@ class GotoIfNot:
 @dataclass
 class Switch:
     target: 'Expr'
-    cases: t.List[int, LabelName]
+    cases: t.Dict[int, LabelName]
 
 
 @dataclass

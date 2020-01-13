@@ -6,6 +6,19 @@ from typing_extensions import Protocol
 dispatcher = {}
 
 
+class Eval_define(Protocol):
+    @abc.abstractmethod
+    def define(module, export, gname, type, bound):
+        ...
+
+
+def define(export, gname, type, bound):
+    return lambda module: module.define(export, gname, type, bound)
+
+
+dispatcher[def_k] = define
+
+
 class Eval_let(Protocol):
     @abc.abstractmethod
     def let(module, is_rec, name, type, bound, body):
@@ -346,13 +359,12 @@ dispatcher[attr_k] = attr
 
 class Eval_module(Protocol):
     @abc.abstractmethod
-    def module(module_eval, is_rec, name, stmts, filename):
+    def module(module_eval, is_rec, name, stmts):
         ...
 
 
-def module(is_rec, name, stmts, filename):
-    return lambda module_eval: module_eval.module(is_rec, name, stmts, filename
-                                                  )
+def module(is_rec, name, stmts):
+    return lambda module_eval: module_eval.module(is_rec, name, stmts)
 
 
 dispatcher[module_k] = module

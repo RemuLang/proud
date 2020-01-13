@@ -12,7 +12,8 @@ W \s+
 %ignore W
 %ignore COMMENT
 
-
+%require module_k
+%require def_k
 %require let_k
 %require type_k
 %require and_k

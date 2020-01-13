@@ -11,13 +11,11 @@ class ASTTag:
         self.name = n
         self.args = args
 
-    def __eq__(self, other):
-        return self is other
-
     def __repr__(self):
         return self.name
 
 
+def_k = ASTTag("define", ["export", "gname", "type", "bound"])
 let_k = ASTTag("let", ["is_rec", "name", "type", "bound", "body"])
 type_k = ASTTag("type", ["name", "definition"])
 and_k = ASTTag("intersect", ["left", "right"])
@@ -44,7 +42,7 @@ pin_k = ASTTag("pin", ["expr"])
 uncall_k = ASTTag("uncall", ["f", "arg"])
 cons_k = ASTTag("cons", ["branches"])
 attr_k = ASTTag("attr", ["base", ("attr_name", "builtins.str")])
-module_k = ASTTag("module", ['is_rec', "name", "stmts", "filename"])
+module_k = ASTTag("module", ['is_rec', "name", "stmts"])
 
 
 def unloc(e):

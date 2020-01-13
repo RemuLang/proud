@@ -39,10 +39,17 @@ class Scope(
     hold_bound: bool
     parent: t.Optional['Scope']
 
+    @classmethod
+    def top(cls):
+        return cls({}, {}, True, None)
+
     def require(self, name: str) -> Sym:
         ...
 
     def enter(self, name: str) -> Sym:
+        ...
+
+    def shadow(self, name: str) -> Sym:
         ...
 
     def sub_scope(self, hold_bound=False) -> 'Scope':
@@ -87,6 +94,11 @@ def enter(scope: Scope, name: str) -> Sym:
     return s
 
 
+def shadow(scope: Scope, name: str) -> Sym:
+    s = scope.boundvars[name] = Sym(name, object(), Ref(False))
+    return s
+
+
 def sub_scope(scope: Scope, hold_bound=False):
     return Scope(OrderedDict(), OrderedDict(), hold_bound, scope)
 
@@ -94,3 +106,4 @@ def sub_scope(scope: Scope, hold_bound=False):
 Scope.require = require
 Scope.sub_scope = sub_scope
 Scope.enter = enter
+Scope.shadow = shadow
