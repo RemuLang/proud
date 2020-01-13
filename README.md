@@ -1,5 +1,7 @@
 ## Proud Programming Language
 
+Currently, the strong type system is finished.
+
 ```python 
 from proud.parser_wrap import parse
 from proud.basic_impl import Modular, CompilerCtx
