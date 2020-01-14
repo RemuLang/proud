@@ -12,6 +12,7 @@ W \s+
 %ignore W
 %ignore COMMENT
 
+%require mutual_k
 %require lit_k
 %require coerce_k
 %require module_k

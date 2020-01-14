@@ -45,7 +45,7 @@ uncall_k = ASTTag("uncall", ["f", "arg"])
 cons_k = ASTTag("cons", ["branches"])
 attr_k = ASTTag("attr", ["base", ("attr_name", "builtins.str")])
 module_k = ASTTag("module", ['is_rec', "name", "stmts"])
-
+mutual_k = ASTTag("mutual", ['cases', 'expr'])
 
 def unloc(e):
     if isinstance(e, tuple) and e and e[0] is loc_k:

@@ -6,6 +6,7 @@ from argser import call
 from colorama import Fore, Style
 import os
 
+
 def check_code(filename):
     print(Fore.YELLOW, end='')
     print('filename: ', filename)
@@ -36,4 +37,6 @@ def check_code(filename):
     for k, v in comp_ctx.tenv.items():
         print(k.name, ':', tc.infer(v))
     print(Style.RESET_ALL)
+
+
 call(check_code)

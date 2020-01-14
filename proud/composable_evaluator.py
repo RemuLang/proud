@@ -383,6 +383,19 @@ def module(is_rec, name, stmts):
 dispatcher[module_k] = module
 
 
+class Eval_mutual(Protocol):
+    @abc.abstractmethod
+    def mutual(module, cases, expr):
+        ...
+
+
+def mutual(cases, expr):
+    return lambda module: module.mutual(cases, expr)
+
+
+dispatcher[mutual_k] = mutual
+
+
 class Eval_set(Protocol):
     @abc.abstractmethod
     def set(module, sym, expr):
