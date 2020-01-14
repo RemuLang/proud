@@ -29,6 +29,10 @@ def check_code(filename):
     comp_ctx.tenv[sym] = te.App(types.type_type, types.float_t)
     sym = comp_ctx.scope.enter("unit")
     comp_ctx.tenv[sym] = te.App(types.type_type, types.unit_t)
+    sym = comp_ctx.scope.enter("value")
+    comp_ctx.tenv[sym] = te.App(types.type_type, types.type_type)
+    sym = comp_ctx.scope.enter("list")
+    comp_ctx.tenv[sym] = te.App(types.type_type, types.list_t)
 
     modular = Modular(comp_ctx)
     lowered_ir = modular.eval(mod)
@@ -37,6 +41,7 @@ def check_code(filename):
     for k, v in comp_ctx.tenv.items():
         print(k.name, ':', tc.infer(v))
     print(Style.RESET_ALL)
+    # print(repr(lowered_ir))
 
-
-call(check_code)
+if __name__ == '__main__':
+    call(check_code)

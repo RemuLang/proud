@@ -108,6 +108,7 @@ atom      : '(' ')'             { loc_((tuple_k, ()), $0) }
           | '$' atom                                 { loc_((unquote_k, $1), $0) }
           | atom '.' <LOWER>                         { loc_((attr_k, $0, *$2), $1) }
           | 'coerce' atom                            { loc_((coerce_k, $1), $0) }
+          | 'val' type                               { loc_((type_k, None, $1), $0) }
 
           | '{' separated_list(',', expr_pair) row_expr  { loc_((record_k, tuple($1), $2), $0) }
           ;
@@ -141,6 +142,7 @@ atom_type : '(' separated_list(',', type) ')'   { loc_((tuple_k, tuple($1)), $0)
           | '[' ']'                             { loc_((list_k, None), $0) }
           | '[' type ']'                        { loc_((list_k, $1), $0) }
           | ID                                  { $0 }
+          | 'val' expr                         { loc_((type_k, None, $1), $0) }
           | '{' separated_list(',', type_pair) row_type  { loc_((record_k, tuple($1), $2), $0) }
           ;
 

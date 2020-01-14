@@ -85,30 +85,36 @@ class Modular(ce.Eval_module, ce.Eval_loc, ce.Eval_define):
         tc_state = prev_comp_ctx.tc_state
         tenv = prev_comp_ctx.tenv
         scope = module.comp_ctx.scope
+        if export:
+            me = scope.require(name)
+            name_var = tenv[me]
+        else:
+            me = scope.enter(name)
+            name_var = types.Var(loc, module.comp_ctx.filename, name)
+            tenv[me] = name_var
+
         sub_scope = scope.sub_scope()
-        me = (scope.require if export else scope.shadow)(name)
-        name_var = tenv[me] = types.Var(loc, module.comp_ctx.filename, name)
-        bound = module.eval(bound)
 
         with keep(module):
             module.comp_ctx = CompilerCtx(sub_scope, tc_state, tenv,
                                           prev_comp_ctx.filename,
                                           prev_comp_ctx.path)
+            if type:
+                my_type_for_unify = my_type = tc_state.infer(
+                    Typing(module.comp_ctx).eval(type))
+                if isinstance(my_type, te.Forall):
+                    my_type_for_unify = my_type.poly_type
+                tc_state.unify(name_var, my_type)
+            else:
+                my_type = my_type_for_unify = name_var
+
+            bound = module.eval(bound)
             bound_type = tc_state.infer(bound.type)
 
             if type:
                 _, bound_type = tc_state.inst_without_structure_preserved(
                     bound_type)
                 bound.type = bound_type
-                my_type_for_unify = my_type = tc_state.infer(
-                    Typing(module.comp_ctx).eval(type))
-
-                if isinstance(my_type, te.Forall):
-                    my_type_for_unify = my_type.poly_type
-
-                tc_state.unify(name_var, my_type)
-            else:
-                my_type = my_type_for_unify = name_var
 
             tc_state.unify(my_type_for_unify, bound_type)
 
@@ -153,10 +159,11 @@ class Modular(ce.Eval_module, ce.Eval_loc, ce.Eval_define):
                 if stmt[0] is sexpr.def_k:
                     if stmt[1]:
                         # export
-                        scope_inside.enter(sexpr.unloc(stmt[2])[1])
+                        _loc, n = sexpr.unloc(stmt[2])
+                        sym = scope_inside.enter(n)
+                        tenv[sym] = types.Var(_loc, filename, n)
                     exprs.append(stmt)
                     continue
-
                 assert stmt[0] == sexpr.type_k
                 _, typename, typedef = stmt
                 _loc, typename = sexpr.unloc(typename)
@@ -170,6 +177,7 @@ class Modular(ce.Eval_module, ce.Eval_loc, ce.Eval_define):
                     nom_typename = types.Nom(qual_typename,
                                              loc=loc,
                                              filename=filename)
+                tenv[sym_typename] = te.App(types.type_type, nom_typename)
 
                 in_append(ignore(ir.Loc(loc)))
 
@@ -179,8 +187,6 @@ class Modular(ce.Eval_module, ce.Eval_loc, ce.Eval_define):
                             sym_typename,
                             ir.Expr(type=nom_typename,
                                     expr=ir.Const(nom_typename)))))
-
-                tenv[sym_typename] = te.App(types.type_type, nom_typename)
 
             syms = scope_inside.get_newest_bounds()
             # module is a record
@@ -218,7 +224,20 @@ type_map = {
 
 
 class Typing(ce.Eval_forall, ce.Eval_exist, ce.Eval_arrow, ce.Eval_imply,
-             ce.Eval_tuple, ce.Eval_record, ce.Eval_list, ce.Eval_loc):
+             ce.Eval_tuple, ce.Eval_record, ce.Eval_list, ce.Eval_loc,
+             ce.Eval_call, ce.Eval_type):
+    def type(module, name, definition):
+        assert name is None
+        x = Express(module.comp_ctx).eval(definition).type
+        ret = types.Var(module._loc, module.comp_ctx.filename, name="valtotype")
+        module.comp_ctx.tc_state.unify(te.App(types.type_type, ret), x)
+        return ret
+
+    def call(module, f, arg):
+        f = module.eval(f)
+        arg = module.eval(arg)
+        return te.App(f, arg)
+
     def record(module, pairs, row):
         _, pairs = sexpr.unloc(pairs)
         if row:
@@ -243,6 +262,12 @@ class Typing(ce.Eval_forall, ce.Eval_exist, ce.Eval_arrow, ce.Eval_imply,
             raise excs.InvalidListType("List of {}".format(elts))
 
     def tuple(module, elts):
+        if not elts:
+            return types.unit_t
+
+        if len(elts) is 1:
+            return module.eval(elts[0])
+
         return te.Tuple(tuple(map(module.eval, elts)))
 
     def imply(module, arg, ret):
@@ -309,7 +334,12 @@ class Typing(ce.Eval_forall, ce.Eval_exist, ce.Eval_arrow, ce.Eval_imply,
 class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
               ce.Eval_binary, ce.Eval_list, ce.Eval_tuple, ce.Eval_record,
               ce.Eval_call, ce.Eval_attr, ce.Eval_quote, ce.Eval_loc,
-              ce.Eval_coerce, ce.Eval_literal):
+              ce.Eval_coerce, ce.Eval_literal, ce.Eval_type):
+    def type(module, name, definition):
+        assert name is None
+        t = Typing(module.comp_ctx).eval(definition)
+        return ir.Expr(expr=ir.Const(t), type=te.App(types.type_type, t))
+
     def literal(module, val):
         my_type = type_map[type(val)]
         return ir.Expr(type=my_type, expr=ir.Const(val))
@@ -514,16 +544,23 @@ class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
             module.comp_ctx = CompilerCtx(sub_scope, tc_state, tenv,
                                           prev_comp_ctx.filename,
                                           prev_comp_ctx.path)
+            if type:
+                my_type_for_unify = my_type = tc_state.infer(
+                    Typing(module.comp_ctx).eval(type))
+                if isinstance(my_type, te.Forall):
+                    my_type_for_unify = my_type.poly_type
+            else:
+                my_type = my_type_for_unify = types.Var(
+                    loc, module.comp_ctx.filename, name)
+
             if is_rec:
                 me = sub_scope.enter(name)
-                name_var = tenv[me] = types.Var(loc, module.comp_ctx.filename,
-                                                name)
+                tenv[me] = my_type
                 bound = module.eval(bound)
             else:
                 bound = module.eval(bound)
                 me = sub_scope.enter(name)
-                name_var = tenv[me] = types.Var(loc, module.comp_ctx.filename,
-                                                name)
+                tenv[me] = my_type
 
             bound_type = tc_state.infer(bound.type)
 
@@ -531,15 +568,6 @@ class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
                 _, bound_type = tc_state.inst_without_structure_preserved(
                     bound_type)
                 bound.type = bound_type
-                my_type_for_unify = my_type = tc_state.infer(
-                    Typing(module.comp_ctx).eval(type))
-
-                if isinstance(my_type, te.Forall):
-                    my_type_for_unify = my_type.poly_type
-
-                tc_state.unify(my_type, name_var)
-            else:
-                my_type = my_type_for_unify = name_var
 
             tc_state.unify(my_type_for_unify, bound_type)
             body = module.eval(body)

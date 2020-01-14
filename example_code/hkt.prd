@@ -1,0 +1,19 @@
+module Mod
+
+type mylist
+
+let cons : forall a. a -> mylist a -> mylist a = coerce 0
+# nil is immutable, so following signature is okay
+let nil : forall a. mylist a = coerce 0
+
+let list1 = cons 2 (cons 1 nil)
+
+let functor : forall f . value f -> value {map : forall a b.(a -> b) -> f a -> f b} = coerce 0
+
+let x : (val functor list) = coerce 0
+# let map : forall f a b. (val functor f) -> (a -> b) -> f a -> f b =
+#    | inst | -> | func | -> | data | -> inst.map func data
+
+
+
+
