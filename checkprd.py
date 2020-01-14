@@ -2,6 +2,7 @@ from proud.parser_wrap import parse
 from proud.basic_impl import Modular, CompilerCtx
 from proud import types
 from hybridts import type_encoding as te, exc
+from hybridts.tc_make import RigidStructureKeeper
 from argser import call
 from colorama import Fore, Style
 from traceback import format_exc
@@ -50,10 +51,15 @@ def check_code(filename):
     print('checked:', Fore.GREEN)
     for k, v in comp_ctx.tenv.items():
         print(k.name, ':', tc.infer(v))
+    print('checked:', Fore.YELLOW)
+
+    for k, v in comp_ctx.tc_state.get_structures().items():
+        print(k, v)
     print(Style.RESET_ALL)
     # print(repr(lowered_ir))
     if err:
         print(err)
+
 
 if __name__ == '__main__':
     call(check_code)

@@ -81,6 +81,7 @@ class Modular(ce.Eval_module, ce.Eval_loc, ce.Eval_define):
     def define(self, export, name, type, bound):
         module = Express(self.comp_ctx)
         loc, name = sexpr.unloc(name)
+
         prev_comp_ctx = module.comp_ctx
         tc_state = prev_comp_ctx.tc_state
         tenv = prev_comp_ctx.tenv
@@ -172,7 +173,8 @@ class Modular(ce.Eval_module, ce.Eval_loc, ce.Eval_define):
                 sym_typename = comp_ctx.scope.enter(typename)
                 if typedef:
                     # type alias
-                    nom_typename = Typing(comp_ctx).eval(typedef)
+                    nom_typename = tc_state.infer(
+                        Typing(comp_ctx).eval(typedef))
                 else:
                     nom_typename = types.Nom(qual_typename,
                                              loc=loc,
@@ -229,8 +231,12 @@ class Typing(ce.Eval_forall, ce.Eval_exist, ce.Eval_arrow, ce.Eval_imply,
     def type(module, name, definition):
         assert name is None
         x = Express(module.comp_ctx).eval(definition).type
-        ret = types.Var(module._loc, module.comp_ctx.filename, name="valtotype")
+        ret = types.Var(module._loc,
+                        module.comp_ctx.filename,
+                        name="valtotype")
+
         module.comp_ctx.tc_state.unify(te.App(types.type_type, ret), x)
+        ret = module.comp_ctx.tc_state.infer(ret)
         return ret
 
     def call(module, f, arg):
@@ -431,6 +437,7 @@ class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
         arg.type = tc_state.infer(arg.type)
 
         _, f_type = tc_state.inst_without_structure_preserved(f.type)
+        f_type = tc_state.infer(f_type)
 
         f_inst = None
         if isinstance(f_type, te.Implicit):
@@ -438,13 +445,8 @@ class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
             f_type = f_type.type
             assert not isinstance(f_type, te.Implicit)
         if isinstance(arg.type, te.Forall):
-            if len(arg.type.fresh_vars) <= 1 or isinstance(
-                    f_type, te.Arrow) and isinstance(f_type.arg, te.Forall):
-                arg_map, arg_type = tc_state.inst_with_structure_preserved(
-                    arg.type)
-            else:
-                arg_map, arg_type = tc_state.inst_without_structure_preserved(
-                    arg.type)
+            arg_map, arg_type = tc_state.inst_without_structure_preserved(
+                arg.type)
         else:
             arg_map, arg_type = {}, arg.type
 
@@ -458,7 +460,8 @@ class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
 
         inst_arrow = te.Arrow(arg_type, ret_t)
         tc_state.unify(inst_arrow, f_type)
-
+        a = tc_state.infer(inst_arrow)
+        b = tc_state.infer(f_type)
         if arg_map:
             gen_bounds = {}
             forall_scope = types.ForallScope(module._loc,

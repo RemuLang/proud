@@ -8,9 +8,10 @@ let nil : forall a. mylist a = coerce 0
 
 let list1 = cons 2 (cons 1 nil)
 
-let functor : forall f . value f -> value {map : forall u1 u2.(u1 -> u2) -> f u1 -> f u2} = | _ | -> val exist _'. _'
+let functor : forall f . value f -> value {map : forall u1 u2.(u1 -> u2) -> f u1 -> f u2} =
+    | _ | -> val exist _'. _'
 
-let list_functor : (val functor list) = coerce 0
+let list_functor : val functor list = coerce 0
 let polymap : forall f . (val functor f) -> forall a b. (a -> b) -> f a -> f b =
         | inst | -> inst.map
 

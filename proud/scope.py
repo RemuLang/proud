@@ -73,7 +73,7 @@ class Scope(
 
 
 def require(scope: Scope, name: str) -> Sym:
-    assert isinstance(name, str)
+    assert isinstance(name, str), name
     var = scope.boundvars.get(name, None)
     if var is not None:
         return var
@@ -92,7 +92,7 @@ def require(scope: Scope, name: str) -> Sym:
 
 
 def enter(scope: Scope, name: str) -> Sym:
-    assert isinstance(name, str)
+    assert isinstance(name, str), name
     if name in scope.boundvars:
         raise BindTwice(name)
     s = scope.boundvars[name] = Sym(name, object(), Ref(False))
@@ -100,7 +100,7 @@ def enter(scope: Scope, name: str) -> Sym:
 
 
 def shadow(scope: Scope, name: str) -> Sym:
-    assert isinstance(name, str)
+    assert isinstance(name, str), name
     s = scope.boundvars[name] = Sym(name, object(), Ref(False))
     return s
 

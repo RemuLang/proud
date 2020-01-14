@@ -7076,6 +7076,7 @@ def mk_parser(mutual_k, lit_k, coerce_k, module_k, def_k, let_k, type_k, and_k, 
                         lcl_4 = lcl_6
                     else:
                         lcl_6 = _slot_0
+                        lcl_6 = lcl_6.value
                         lcl_6 = (call__k, lcl_6)
                         lcl_7 = _slot_0
                         lcl_6 = loc__(lcl_6, lcl_7)
