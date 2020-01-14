@@ -103,7 +103,7 @@ class Modular(ce.Eval_module, ce.Eval_loc, ce.Eval_define):
                 my_type_for_unify = my_type = tc_state.infer(
                     Typing(module.comp_ctx).eval(type))
                 if isinstance(my_type, te.Forall):
-                    my_type_for_unify = my_type.poly_type
+                    my_type_for_unify = types.remove_bound_scope(my_type)
                 tc_state.unify(name_var, my_type)
             else:
                 my_type = my_type_for_unify = name_var
@@ -548,7 +548,7 @@ class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
                 my_type_for_unify = my_type = tc_state.infer(
                     Typing(module.comp_ctx).eval(type))
                 if isinstance(my_type, te.Forall):
-                    my_type_for_unify = my_type.poly_type
+                    my_type_for_unify = types.remove_bound_scope(my_type)
             else:
                 my_type = my_type_for_unify = types.Var(
                     loc, module.comp_ctx.filename, name)

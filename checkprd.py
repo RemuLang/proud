@@ -1,10 +1,11 @@
 from proud.parser_wrap import parse
 from proud.basic_impl import Modular, CompilerCtx
 from proud import types
-from hybridts import type_encoding as te
+from hybridts import type_encoding as te, exc
 from argser import call
 from colorama import Fore, Style
-import os
+from traceback import format_exc
+import os, sys
 
 
 def check_code(filename):
@@ -35,13 +36,24 @@ def check_code(filename):
     comp_ctx.tenv[sym] = te.App(types.type_type, types.list_t)
 
     modular = Modular(comp_ctx)
-    lowered_ir = modular.eval(mod)
+    err = None
+    try:
+        lowered_ir = modular.eval(mod)
+    except exc.TypeMismatch as e:
+        print(Fore.RED)
+        print(e)
+        print(Style.RESET_ALL)
+        err = format_exc()
+
+
     tc = comp_ctx.tc_state
     print('checked:', Fore.GREEN)
     for k, v in comp_ctx.tenv.items():
         print(k.name, ':', tc.infer(v))
     print(Style.RESET_ALL)
     # print(repr(lowered_ir))
+    if err:
+        print(err)
 
 if __name__ == '__main__':
     call(check_code)

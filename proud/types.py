@@ -4,8 +4,8 @@ import typing
 # for "value as type".
 # This is not achieve in type system, but the compiler.
 
-
 compiler_builtin_file = object()
+
 
 def show_loc(filename, loc):
     if filename is compiler_builtin_file:
@@ -14,8 +14,6 @@ def show_loc(filename, loc):
     if loc:
         s = '{}, line {}, col {}'.format(s, loc[0], loc[1])
     return s
-
-
 
 
 class Nom(te.Nom):
@@ -29,7 +27,8 @@ class Nom(te.Nom):
 
     def __repr__(self):
 
-        return '<{}{}>'.format(self.name, show_loc(loc=self.loc, filename=self.filename))
+        return '<{}{}>'.format(self.name,
+                               show_loc(loc=self.loc, filename=self.filename))
 
 
 class ForallScope(te.ForallGroup):
@@ -38,7 +37,8 @@ class ForallScope(te.ForallGroup):
         self.filename = filename
 
     def __repr__(self):
-        return '<forall{}>'.format(show_loc(loc=self.loc, filename=self.filename))
+        return '<forall{}>'.format(
+            show_loc(loc=self.loc, filename=self.filename))
 
 
 class Var(te.Var):
@@ -50,7 +50,21 @@ class Var(te.Var):
 
     def __repr__(self):
         return '<{}{}>'.format(self.name,
-                                show_loc(filename=self.filename, loc=self.loc))
+                               show_loc(filename=self.filename, loc=self.loc))
+
+
+def _remove_bound_scope_visitor(_, t):
+    if isinstance(t, te.Forall):
+        return (), t.poly_type
+    return (), t
+
+
+_visit_bound_scope_visitor = te.pre_visit(_remove_bound_scope_visitor)
+
+
+def remove_bound_scope(t: te.Forall):
+    return t.poly_type
+    # return _visit_bound_scope_visitor((), t)
 
 
 def fresh(n: str):
