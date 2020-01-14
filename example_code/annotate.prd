@@ -1,0 +1,2 @@
+module MyMod
+let test : exist a. a = coerce 0 : string

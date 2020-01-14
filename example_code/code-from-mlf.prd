@@ -1,0 +1,4 @@
+module MyMod
+export auto : forall a. a -> a = | x | -> x
+let choose: forall a. a -> a -> a = | x | -> | y | -> x
+let res = choose auto

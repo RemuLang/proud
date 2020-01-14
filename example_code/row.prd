@@ -1,0 +1,8 @@
+module MyMod
+let add : bigint -> bigint -> bigint = coerce 0
+let y : {c: string} = coerce 0
+let x = {a = 0, b = 3 | y}
+
+let f : forall tho. {a : bigint, b: bigint | tho} -> tho = coerce 0
+let inst = f x
+type MyType
