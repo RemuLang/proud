@@ -379,7 +379,10 @@ class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
         raise NotImplementedError
 
     def annotate(module, var, type):
-        raise NotImplementedError
+        var = module.eval(var)
+        type = Typing(module.comp_ctx).eval(type)
+        module.comp_ctx.tc_state.unify(var.type, type)
+        return var
 
     def match(module, target, cases: list):
         raise NotImplementedError

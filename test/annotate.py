@@ -2,13 +2,9 @@ from proud.parser_wrap import parse
 from proud.basic_impl import Modular, CompilerCtx
 from proud import types
 from hybridts import type_encoding as te
-# from prettyprinter import pprint as pp, install_extras
-# install_extras()
 mod = parse("""
 module MyMod
-let add : bigint -> bigint -> bigint = coerce 0
-let y : {c: string} = coerce 0
-let x = {a = 0, b = 3 | y}
+let test : exist a. a = coerce 0 : string 
 """)
 comp_ctx = CompilerCtx.top('a.prd', 'a')
 sym = comp_ctx.scope.enter("bigint")
