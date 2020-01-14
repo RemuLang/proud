@@ -37,15 +37,15 @@ primitive_pat : <LOWER>                                  { loc_(*$0, $0) }
               | '[' separated_list(',', pat) ']'         { loc_((list_k, $1), $0) }
               | '{' '}'                                  { loc_((record_k, ()), $0) }
 
-              | '{' separated_list(',', pat_pair) row_pat  { loc_((record_k, $1, $2), $0) }
+              | '{' separated_list(',', pat_pair) row_pat  { loc_((record_k, tuple($1), $2), $0) }
               ;
 
 row_pat   : '}'           { None }
           | '|' pat '}'   { loc_($1, $0) }
           ;
 
-pat_pair : <LOWER> '=' pat { loc_((pair_k, *$0, $2), $0) }
-         | <LOWER>
+pat_pair : <LOWER> '=' pat { (*$0, $2) }
+         | <LOWER>         { (*$0, *$0) }
          ;
 
 and_pat  : and_pat 'and' primitive_pat { loc_((and_k, $0, $2), $1) }
@@ -102,7 +102,7 @@ atom      : '(' ')'             { loc_((tuple_k, ()), $0) }
           | <STRING>                                 { loc_((lit_k, DQString(*$0)), $0) }
           | '`' atom                                 { loc_((quote_k, $1), $0) }
           | '$' atom                                 { loc_((unquote_k, $1), $0) }
-          | atom '.' ID                              { loc_((attr_k, $0, $2), $1) }
+          | atom '.' <LOWER>                         { loc_((attr_k, $0, *$2), $1) }
           | 'coerce' atom                            { loc_((coerce_k, $1), $0) }
 
           | '{' separated_list(',', expr_pair) row_expr  { loc_((record_k, tuple($1), $2), $0) }
@@ -112,8 +112,8 @@ row_expr  : '}'            { None }
           | '|' expr '}'   { loc_($1, $0) }
           ;
 
-expr_pair : <LOWER> '=' expr { loc_((pair_k, *$0, $2), $0) }
-          | <LOWER>
+expr_pair : <LOWER> '=' expr { (*$0, $2) }
+          | <LOWER>          { (*$0, *$0) }
           ;
 
 type : 'forall' list(ID) '.' type  { loc_((forall_k, tuple($1), $3), $0) }
@@ -137,13 +137,13 @@ atom_type : '(' separated_list(',', type) ')'   { loc_((tuple_k, tuple($1)), $0)
           | '[' ']'                             { loc_((list_k, None), $0) }
           | '[' type ']'                        { loc_((list_k, $1), $0) }
           | ID                                  { $0 }
-          | '{' separated_list(',', type_pair) row_type  { loc_((record_k, $1, tuple($2)), $0) }
+          | '{' separated_list(',', type_pair) row_type  { loc_((record_k, tuple($1), $2), $0) }
           ;
 
 row_type  : '}'            { None }
           | '|' type '}'   { loc_($1, $0) }
           ;
 
-type_pair : <LOWER> ':' type { loc_((pair_k, *$0, $2), $0) }
-          | <LOWER>
+type_pair : <LOWER> ':' type  { (*$0, $2) }
+          | <LOWER>           { (*$0, *$0) }
           ;

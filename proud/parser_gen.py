@@ -8,7 +8,7 @@ __all__ = ['lexicals', 'run_lexer', 'mk_parser']
 
 
 
-def mk_parser(lit_k, coerce_k, module_k, def_k, let_k, type_k, and_k, or_k, quote_k, unquote_k, lambda_k, match_k, ann_k, bin_k, case_k, list_k, tuple_k, record_k, pair_k, call_k, arrow_k, imply_k, loc_k, forall_k, exist_k, guard_k, pin_k, uncall_k, alias_k, attr_k, loc_, DQString):
+def mk_parser(lit_k, coerce_k, module_k, def_k, let_k, type_k, and_k, or_k, quote_k, unquote_k, lambda_k, match_k, ann_k, bin_k, case_k, list_k, tuple_k, record_k, call_k, arrow_k, imply_k, loc_k, forall_k, exist_k, guard_k, pin_k, uncall_k, alias_k, attr_k, loc_, DQString):
     from rbnf_rts.rts import AST as prim__mk__ast, Cons as prim__cons, _nil as prim__nil
     lit__k = lit_k
     coerce__k = coerce_k
@@ -28,7 +28,6 @@ def mk_parser(lit_k, coerce_k, module_k, def_k, let_k, type_k, and_k, or_k, quot
     list__k = list_k
     tuple__k = tuple_k
     record__k = record_k
-    pair__k = pair_k
     call__k = call_k
     arrow__k = arrow_k
     imply__k = imply_k
@@ -133,18 +132,29 @@ def mk_parser(lit_k, coerce_k, module_k, def_k, let_k, type_k, and_k, or_k, quot
             lcl_1 = (False, lcl_1)
             lcl_0 = lcl_1
         else:
-            lcl_1 = parse_ID(prim__state, prim__tokens)
-            _slot_2_check = lcl_1
-            lcl_1 = _slot_2_check[0]
-            lcl_1 = (lcl_1 is False)
+            lcl_1 = 38
+            try:
+                _py_local_tk = prim__tokens.array[prim__tokens.offset]
+                if (_py_local_tk.idint is lcl_1):
+                    prim__tokens.offset += 1
+                else:
+                    _py_local_tk = None
+            except IndexError:
+                _py_local_tk = None
+            lcl_1 = _py_local_tk
+            _slot_2 = lcl_1
+            lcl_1 = (_slot_2 is None)
             if lcl_1:
-                lcl_1 = _slot_2_check
-            else:
-                lcl_2 = _slot_2_check[1]
+                lcl_2 = prim__tokens.offset
+                lcl_2 = (lcl_2, 'LOWER not match')
+                lcl_2 = prim__cons(lcl_2, prim__nil)
                 lcl_2 = lcl_2
-                _slot_2 = lcl_2
+                lcl_2 = (False, lcl_2)
+                lcl_1 = lcl_2
+            else:
                 lcl_2 = _slot_0
                 lcl_3 = _slot_2
+                lcl_3 = lcl_3.value
                 lcl_2 = (attr__k, lcl_2, lcl_3)
                 lcl_3 = _slot_1
                 lcl_2 = loc__(lcl_2, lcl_3)
@@ -3260,8 +3270,8 @@ def mk_parser(lit_k, coerce_k, module_k, def_k, let_k, type_k, and_k, or_k, quot
                                 lcl_8 = lcl_8
                                 _slot_2 = lcl_8
                                 lcl_8 = _slot_1
+                                lcl_8 = tuple(lcl_8)
                                 lcl_9 = _slot_2
-                                lcl_9 = tuple(lcl_9)
                                 lcl_8 = (record__k, lcl_8, lcl_9)
                                 lcl_9 = _slot_0
                                 lcl_8 = loc__(lcl_8, lcl_9)
@@ -5174,16 +5184,17 @@ def mk_parser(lit_k, coerce_k, module_k, def_k, let_k, type_k, and_k, or_k, quot
                         lcl_5 = _slot_0
                         lcl_5 = lcl_5.value
                         lcl_6 = _slot_2
-                        lcl_5 = (pair__k, lcl_5, lcl_6)
-                        lcl_6 = _slot_0
-                        lcl_5 = loc__(lcl_5, lcl_6)
+                        lcl_5 = (lcl_5, lcl_6)
                         _slot_local__1 = lcl_5
                         lcl_5 = (True, _slot_local__1)
                         lcl_4 = lcl_5
                     lcl_2 = lcl_4
                 else:
-                    lcl_4 = (_slot_0,)
-                    lcl_4 = prim__mk__ast('expr_pair', lcl_4)
+                    lcl_4 = _slot_0
+                    lcl_4 = lcl_4.value
+                    lcl_5 = _slot_0
+                    lcl_5 = lcl_5.value
+                    lcl_4 = (lcl_4, lcl_5)
                     _slot_local__1 = lcl_4
                     lcl_4 = (True, _slot_local__1)
                     lcl_2 = lcl_4
@@ -5468,16 +5479,17 @@ def mk_parser(lit_k, coerce_k, module_k, def_k, let_k, type_k, and_k, or_k, quot
                         lcl_5 = _slot_0
                         lcl_5 = lcl_5.value
                         lcl_6 = _slot_2
-                        lcl_5 = (pair__k, lcl_5, lcl_6)
-                        lcl_6 = _slot_0
-                        lcl_5 = loc__(lcl_5, lcl_6)
+                        lcl_5 = (lcl_5, lcl_6)
                         _slot_local__1 = lcl_5
                         lcl_5 = (True, _slot_local__1)
                         lcl_4 = lcl_5
                     lcl_2 = lcl_4
                 else:
-                    lcl_4 = (_slot_0,)
-                    lcl_4 = prim__mk__ast('pat_pair', lcl_4)
+                    lcl_4 = _slot_0
+                    lcl_4 = lcl_4.value
+                    lcl_5 = _slot_0
+                    lcl_5 = lcl_5.value
+                    lcl_4 = (lcl_4, lcl_5)
                     _slot_local__1 = lcl_4
                     lcl_4 = (True, _slot_local__1)
                     lcl_2 = lcl_4
@@ -5545,6 +5557,7 @@ def mk_parser(lit_k, coerce_k, module_k, def_k, let_k, type_k, and_k, or_k, quot
                                 lcl_8 = lcl_8
                                 _slot_2 = lcl_8
                                 lcl_8 = _slot_1
+                                lcl_8 = tuple(lcl_8)
                                 lcl_9 = _slot_2
                                 lcl_8 = (record__k, lcl_8, lcl_9)
                                 lcl_9 = _slot_0
@@ -7894,16 +7907,17 @@ def mk_parser(lit_k, coerce_k, module_k, def_k, let_k, type_k, and_k, or_k, quot
                         lcl_5 = _slot_0
                         lcl_5 = lcl_5.value
                         lcl_6 = _slot_2
-                        lcl_5 = (pair__k, lcl_5, lcl_6)
-                        lcl_6 = _slot_0
-                        lcl_5 = loc__(lcl_5, lcl_6)
+                        lcl_5 = (lcl_5, lcl_6)
                         _slot_local__1 = lcl_5
                         lcl_5 = (True, _slot_local__1)
                         lcl_4 = lcl_5
                     lcl_2 = lcl_4
                 else:
-                    lcl_4 = (_slot_0,)
-                    lcl_4 = prim__mk__ast('type_pair', lcl_4)
+                    lcl_4 = _slot_0
+                    lcl_4 = lcl_4.value
+                    lcl_5 = _slot_0
+                    lcl_5 = lcl_5.value
+                    lcl_4 = (lcl_4, lcl_5)
                     _slot_local__1 = lcl_4
                     lcl_4 = (True, _slot_local__1)
                     lcl_2 = lcl_4

@@ -55,6 +55,11 @@ def keep(self):
         self.comp_ctx = comp
 
 
+def _sort_key(expr: ir.Expr):
+    assert isinstance(expr.expr, Sym)
+    return expr.expr.name
+
+
 class Modular(ce.Eval_module, ce.Eval_loc, ce.Eval_define):
     def __init__(self, compiler_ctx: CompilerCtx):
         """
@@ -187,11 +192,9 @@ class Modular(ce.Eval_module, ce.Eval_loc, ce.Eval_define):
                 tc_state.unify(module_type, te.Record(mod_row))
             else:
                 module_type = te.Record(mod_row)
-            in_append(
-                ir.Expr(type=module_type,
-                        expr=ir.Tuple([
-                            ir.Expr(type=tenv[sym], expr=sym) for sym in syms
-                        ])))
+            elts = [ir.Expr(type=tenv[sym], expr=sym) for sym in syms]
+            elts.sort(key=_sort_key)
+            in_append(ir.Expr(type=module_type, expr=ir.Tuple(elts)))
 
         if not is_rec:
             mod_record_sym = prev_comp_ctx.scope.enter(name)
@@ -209,16 +212,17 @@ type_map = {
     int: types.bigint_t,
     str: types.string_t,
     float: types.float_t,
-    complex: types.complex_t
+    complex: types.complex_t,
+    bool: types.bool_t
 }
 
 
 class Typing(ce.Eval_forall, ce.Eval_exist, ce.Eval_arrow, ce.Eval_imply,
              ce.Eval_tuple, ce.Eval_record, ce.Eval_list, ce.Eval_loc):
     def record(module, pairs, row):
+        _, pairs = sexpr.unloc(pairs)
         if row:
             row_t = te.RowPoly(module.eval(row))
-
         else:
             row_t = te.empty_row
 
@@ -322,10 +326,41 @@ class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
         raise NotImplementedError
 
     def attr(module, base, attr_name: str):
-        raise NotImplementedError
+        base = module.eval(base)
+        var = types.Var(loc=module._loc,
+                        filename=module.comp_ctx.filename,
+                        name=attr_name + ".getter")
+        tho = types.Var(loc=module._loc,
+                        filename=module.comp_ctx.filename,
+                        name=attr_name + ".tho")
+        record_type = te.Record(
+            te.row_from_list([(attr_name, var)], te.RowPoly(tho)))
+        module.comp_ctx.tc_state.unify(record_type, base.type)
+        return ir.Expr(expr=ir.Field(base=base, attr=attr_name), type=var)
 
     def record(module, pairs, row):
-        raise NotImplementedError
+        kv = []
+        for each in pairs:
+            loc, (attr_name, expr) = sexpr.unloc(each)
+            expr = module.eval(expr)
+            kv.append((attr_name, expr))
+
+        kv.sort(key=lambda tp: tp[0])
+        elts = [elt for _, elt in kv]
+        mono = te.Record(
+            te.row_from_list([(k, v.type) for k, v in kv], te.empty_row))
+        left = ir.Expr(expr=ir.Tuple(elts), type=mono)
+
+        if not row:
+            return left
+
+        right = module.eval(row)
+
+        my_type = te.Record(
+            te.row_from_list([(k, v.type) for k, v in kv],
+                             te.RowPoly(right.type)))
+
+        return ir.Expr(expr=ir.Merge(left=left, right=right), type=my_type)
 
     def tuple(module, elts):
         if not elts:

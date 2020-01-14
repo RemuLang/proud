@@ -227,19 +227,6 @@ def record(pairs, row):
 dispatcher[record_k] = record
 
 
-class Eval_pair(Protocol):
-    @abc.abstractmethod
-    def pair(module, key: builtins.str, value):
-        ...
-
-
-def pair(key: builtins.str, value):
-    return lambda module: module.pair(key, value)
-
-
-dispatcher[pair_k] = pair
-
-
 class Eval_call(Protocol):
     @abc.abstractmethod
     def call(module, f, arg):

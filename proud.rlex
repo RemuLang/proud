@@ -30,7 +30,6 @@ W \s+
 %require list_k
 %require tuple_k
 %require record_k
-%require pair_k
 %require call_k
 %require arrow_k
 %require imply_k

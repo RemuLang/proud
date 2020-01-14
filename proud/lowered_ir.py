@@ -132,17 +132,34 @@ class WrapLoc:
 class Tuple:
     elts: t.List['Expr']
 
+
 # # @derive.post_visitor(lambda _, __, s: s == 'Expr')
 # # @derive.pre_visitor(lambda _, __, s: s == 'Expr')
+
 
 @dataclass
 class Coerce:
     target: 'Expr'
 
 
+@dataclass
+class Field:
+    base: 'Expr'
+    attr: str
+
+
+@dataclass
+class Merge:
+    """
+    record merge
+    """
+    left: 'Expr'
+    right: 'Expr'
+
+
 BaseExpr = t.Union[Fun, Switch, Goto, GotoIf, GotoIfNot, Label, Project,
                    Invoke, WrapLoc, Block, Set, Instance, Const, Loc,
-                   scope.Sym, Tuple, Coerce]
+                   scope.Sym, Tuple, Coerce, Field, Merge]
 
 
 # @derive.post_visitor(lambda _, __, s: s == BaseExpr)
@@ -157,5 +174,3 @@ class Expr:
 
     def pre_visit(self, f) -> None:
         raise NotImplementedError
-
-
