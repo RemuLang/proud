@@ -20,4 +20,4 @@ let ret = map list_functor
 let map' : forall f x y. (val functor f) -> (x -> y) -> f x -> f y =
         | inst: (val functor f) | -> | func | -> | data | -> inst.map func data
 
-# let ret' = map' list_functor
+let ret' = map' list_functor
