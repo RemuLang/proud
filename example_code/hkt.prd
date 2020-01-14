@@ -11,13 +11,13 @@ let list1 = cons 2 (cons 1 nil)
 let functor : forall f . value f -> value {map : forall u1 u2.(u1 -> u2) -> f u1 -> f u2} = | _ | -> val exist _'. _'
 
 let list_functor : (val functor list) = coerce 0
-let map : forall f . (val functor f) -> forall a b. (a -> b) -> f a -> f b =
+let polymap : forall f . (val functor f) -> forall a b. (a -> b) -> f a -> f b =
         | inst | -> inst.map
 
-let ret = map list_functor
+let ret = polymap list_functor
 
 
-let map' : forall f x y. (val functor f) -> (x -> y) -> f x -> f y =
+let monomap : forall f x y. (val functor f) -> (x -> y) -> f x -> f y =
         | inst: (val functor f) | -> | func | -> | data | -> inst.map func data
 
-let ret' = map' list_functor
+let ret' = monomap list_functor
