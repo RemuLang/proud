@@ -8,8 +8,9 @@ __all__ = ['lexicals', 'run_lexer', 'mk_parser']
 
 
 
-def mk_parser(coerce_k, module_k, def_k, let_k, type_k, and_k, or_k, quote_k, unquote_k, lambda_k, match_k, ann_k, bin_k, case_k, list_k, tuple_k, record_k, pair_k, call_k, arrow_k, imply_k, loc_k, forall_k, exist_k, guard_k, pin_k, uncall_k, alias_k, attr_k, loc_, DQString):
+def mk_parser(lit_k, coerce_k, module_k, def_k, let_k, type_k, and_k, or_k, quote_k, unquote_k, lambda_k, match_k, ann_k, bin_k, case_k, list_k, tuple_k, record_k, pair_k, call_k, arrow_k, imply_k, loc_k, forall_k, exist_k, guard_k, pin_k, uncall_k, alias_k, attr_k, loc_, DQString):
     from rbnf_rts.rts import AST as prim__mk__ast, Cons as prim__cons, _nil as prim__nil
+    lit__k = lit_k
     coerce__k = coerce_k
     module__k = module_k
     def__k = def_k
@@ -2376,8 +2377,9 @@ def mk_parser(coerce_k, module_k, def_k, let_k, type_k, and_k, or_k, quote_k, un
                 prim__tokens.offset = (_py_local_i + 1)
                 lcl_3 = _py_local_t
                 _slot_0 = lcl_3
-                lcl_3 = _slot_0
-                lcl_3 = loc__(True, lcl_3)
+                lcl_3 = (lit__k, True)
+                lcl_4 = _slot_0
+                lcl_3 = loc__(lcl_3, lcl_4)
                 _slot_local__1 = lcl_3
                 lcl_3 = lr_loop_atom(_slot_local__1, prim__state, prim__tokens)
                 lcl_1 = lcl_3
@@ -2387,8 +2389,9 @@ def mk_parser(coerce_k, module_k, def_k, let_k, type_k, and_k, or_k, quote_k, un
                 prim__tokens.offset = (_py_local_i + 1)
                 lcl_3 = _py_local_t
                 _slot_0 = lcl_3
-                lcl_3 = _slot_0
-                lcl_3 = loc__(False, lcl_3)
+                lcl_3 = (lit__k, False)
+                lcl_4 = _slot_0
+                lcl_3 = loc__(lcl_3, lcl_4)
                 _slot_local__1 = lcl_3
                 lcl_3 = lr_loop_atom(_slot_local__1, prim__state, prim__tokens)
                 lcl_1 = lcl_3
@@ -3136,6 +3139,7 @@ def mk_parser(coerce_k, module_k, def_k, let_k, type_k, and_k, or_k, quote_k, un
                 lcl_3 = _slot_0
                 lcl_3 = lcl_3.value
                 lcl_3 = DQString(lcl_3)
+                lcl_3 = (lit__k, lcl_3)
                 lcl_4 = _slot_0
                 lcl_3 = loc__(lcl_3, lcl_4)
                 _slot_local__1 = lcl_3
@@ -3166,6 +3170,7 @@ def mk_parser(coerce_k, module_k, def_k, let_k, type_k, and_k, or_k, quote_k, un
                 lcl_3 = _slot_0
                 lcl_3 = lcl_3.value
                 lcl_3 = int(lcl_3)
+                lcl_3 = (lit__k, lcl_3)
                 lcl_4 = _slot_0
                 lcl_3 = loc__(lcl_3, lcl_4)
                 _slot_local__1 = lcl_3
@@ -3180,6 +3185,7 @@ def mk_parser(coerce_k, module_k, def_k, let_k, type_k, and_k, or_k, quote_k, un
                 lcl_3 = _slot_0
                 lcl_3 = lcl_3.value
                 lcl_3 = float(lcl_3)
+                lcl_3 = (lit__k, lcl_3)
                 lcl_4 = _slot_0
                 lcl_3 = loc__(lcl_3, lcl_4)
                 _slot_local__1 = lcl_3

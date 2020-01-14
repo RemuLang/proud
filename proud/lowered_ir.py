@@ -15,8 +15,8 @@ class LabelName:
         return '<label {}>'.format(self.name)
 
 
-@derive.post_visitor(lambda _, __, s: s == 'Expr')
-@derive.pre_visitor(lambda _, __, s: s == 'Expr')
+# @derive.post_visitor(lambda _, __, s: s == 'Expr')
+# @derive.pre_visitor(lambda _, __, s: s == 'Expr')
 @dataclass
 class Instance:
     inst_t: te.T
@@ -24,77 +24,77 @@ class Instance:
     expr: 'Expr'
 
 
-@derive.post_visitor(lambda _, __, s: s == 'Expr')
-@derive.pre_visitor(lambda _, __, s: s == 'Expr')
+# @derive.post_visitor(lambda _, __, s: s == 'Expr')
+# @derive.pre_visitor(lambda _, __, s: s == 'Expr')
 @dataclass
 class Set:
     name: scope.Sym
     expr: 'Expr'
 
 
-@derive.post_visitor(lambda _, __, s: s == 'Expr')
-@derive.pre_visitor(lambda _, __, s: s == 'Expr')
+# @derive.post_visitor(lambda _, __, s: s == 'Expr')
+# @derive.pre_visitor(lambda _, __, s: s == 'Expr')
 @dataclass
 class Block:
     elts: t.List['Expr']
 
 
-@derive.post_visitor(lambda _, __, s: s == 'Expr')
-@derive.pre_visitor(lambda _, __, s: s == 'Expr')
+# @derive.post_visitor(lambda _, __, s: s == 'Expr')
+# @derive.pre_visitor(lambda _, __, s: s == 'Expr')
 @dataclass
 class Invoke:
     f: 'Expr'
     arg: 'Expr'
 
 
-@derive.post_visitor(lambda _, __, s: s == 'Expr')
-@derive.pre_visitor(lambda _, __, s: s == 'Expr')
+# @derive.post_visitor(lambda _, __, s: s == 'Expr')
+# @derive.pre_visitor(lambda _, __, s: s == 'Expr')
 @dataclass
 class Project:
     base: 'Expr'
     item: 'Expr'
 
 
-@derive.post_visitor(lambda _, __, s: s == 'Expr')
-@derive.pre_visitor(lambda _, __, s: s == 'Expr')
+# @derive.post_visitor(lambda _, __, s: s == 'Expr')
+# @derive.pre_visitor(lambda _, __, s: s == 'Expr')
 @dataclass
 class Label:
     name: LabelName
 
 
-@derive.post_visitor(lambda _, __, s: s == 'Expr')
-@derive.pre_visitor(lambda _, __, s: s == 'Expr')
+# @derive.post_visitor(lambda _, __, s: s == 'Expr')
+# @derive.pre_visitor(lambda _, __, s: s == 'Expr')
 @dataclass
 class Goto:
     name: LabelName
 
 
-@derive.post_visitor(lambda _, __, s: s == 'Expr')
-@derive.pre_visitor(lambda _, __, s: s == 'Expr')
+# @derive.post_visitor(lambda _, __, s: s == 'Expr')
+# @derive.pre_visitor(lambda _, __, s: s == 'Expr')
 @dataclass
 class GotoIf:
     name: LabelName
     expr: 'Expr'
 
 
-@derive.post_visitor(lambda _, __, s: s == 'Expr')
-@derive.pre_visitor(lambda _, __, s: s == 'Expr')
+# @derive.post_visitor(lambda _, __, s: s == 'Expr')
+# @derive.pre_visitor(lambda _, __, s: s == 'Expr')
 @dataclass
 class GotoIfNot:
     name: LabelName
     expr: 'Expr'
 
 
-@derive.post_visitor(lambda _, __, s: s == 'Expr')
-@derive.pre_visitor(lambda _, __, s: s == 'Expr')
+# @derive.post_visitor(lambda _, __, s: s == 'Expr')
+# @derive.pre_visitor(lambda _, __, s: s == 'Expr')
 @dataclass
 class Switch:
     target: 'Expr'
     cases: t.Dict[int, LabelName]
 
 
-@derive.post_visitor(lambda _, __, s: s == 'Expr')
-@derive.pre_visitor(lambda _, __, s: s == 'Expr')
+# @derive.post_visitor(lambda _, __, s: s == 'Expr')
+# @derive.pre_visitor(lambda _, __, s: s == 'Expr')
 @dataclass
 class Fun:
     name: str
@@ -104,36 +104,36 @@ class Fun:
     expr: 'Expr'
 
 
-@derive.post_visitor(lambda _, __, s: s == 'Expr')
-@derive.pre_visitor(lambda _, __, s: s == 'Expr')
+# @derive.post_visitor(lambda _, __, s: s == 'Expr')
+# @derive.pre_visitor(lambda _, __, s: s == 'Expr')
 @dataclass
 class Const:
     value: object
 
 
-@derive.post_visitor(lambda _, __, s: s == 'Expr')
-@derive.pre_visitor(lambda _, __, s: s == 'Expr')
+# @derive.post_visitor(lambda _, __, s: s == 'Expr')
+# @derive.pre_visitor(lambda _, __, s: s == 'Expr')
 @dataclass
 class Loc:
     loc: object
 
 
-@derive.post_visitor(lambda _, __, s: s == 'Expr')
-@derive.pre_visitor(lambda _, __, s: s == 'Expr')
+# @derive.post_visitor(lambda _, __, s: s == 'Expr')
+# @derive.pre_visitor(lambda _, __, s: s == 'Expr')
 @dataclass
 class WrapLoc:
     loc: object
     expr: 'Expr'
 
 
-@derive.post_visitor(lambda _, __, s: s == 'Expr')
-@derive.pre_visitor(lambda _, __, s: s == 'Expr')
+# @derive.post_visitor(lambda _, __, s: s == 'Expr')
+# @derive.pre_visitor(lambda _, __, s: s == 'Expr')
 @dataclass
 class Tuple:
     elts: t.List['Expr']
 
-# @derive.post_visitor(lambda _, __, s: s == 'Expr')
-# @derive.pre_visitor(lambda _, __, s: s == 'Expr')
+# # @derive.post_visitor(lambda _, __, s: s == 'Expr')
+# # @derive.pre_visitor(lambda _, __, s: s == 'Expr')
 
 @dataclass
 class Coerce:
@@ -145,8 +145,8 @@ BaseExpr = t.Union[Fun, Switch, Goto, GotoIf, GotoIfNot, Label, Project,
                    scope.Sym, Tuple, Coerce]
 
 
-@derive.post_visitor(lambda _, __, s: s == BaseExpr)
-@derive.pre_visitor(lambda _, __, s: s == BaseExpr)
+# @derive.post_visitor(lambda _, __, s: s == BaseExpr)
+# @derive.pre_visitor(lambda _, __, s: s == BaseExpr)
 @dataclass
 class Expr:
     type: te.T
@@ -157,4 +157,5 @@ class Expr:
 
     def pre_visit(self, f) -> None:
         raise NotImplementedError
+
 

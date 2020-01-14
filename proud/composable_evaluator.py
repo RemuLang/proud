@@ -6,6 +6,19 @@ from typing_extensions import Protocol
 dispatcher = {}
 
 
+class Eval_literal(Protocol):
+    @abc.abstractmethod
+    def literal(module, val):
+        ...
+
+
+def literal(val):
+    return lambda module: module.literal(val)
+
+
+dispatcher[lit_k] = literal
+
+
 class Eval_coerce(Protocol):
     @abc.abstractmethod
     def coerce(module, expr):

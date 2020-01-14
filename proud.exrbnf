@@ -92,14 +92,14 @@ call_expr : call_expr atom      { (call_k, $0, $1) }
 atom      : '(' ')'             { loc_((tuple_k, ()), $0) }
           | '[' ']'             { loc_((list_k, ()), $0) }
           | '{' '}'             { loc_((record_k, ()), $0) }
-          | 'True'              { loc_(True, $0) }
-          | 'False'             { loc_(False, $0) }
+          | 'True'              { loc_((lit_k, True), $0) }
+          | 'False'             { loc_((lit_k, False), $0) }
           | '[' separated_list(',', expr) ']'        { loc_((list_k, tuple($1)), $0) }
           | '(' separated_list(',', expr) ')'        { loc_((tuple_k, tuple($1)), $0) }
           | ID                                       { $0 }
-          | <INT>                                    { loc_(int(*$0), $0) }
-          | <FLOAT>                                  { loc_(float(*$0), $0) }
-          | <STRING>                                 { loc_(DQString(*$0), $0) }
+          | <INT>                                    { loc_((lit_k, int(*$0)), $0) }
+          | <FLOAT>                                  { loc_((lit_k, float(*$0)), $0) }
+          | <STRING>                                 { loc_((lit_k, DQString(*$0)), $0) }
           | '`' atom                                 { loc_((quote_k, $1), $0) }
           | '$' atom                                 { loc_((unquote_k, $1), $0) }
           | atom '.' ID                              { loc_((attr_k, $0, $2), $1) }

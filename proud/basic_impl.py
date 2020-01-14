@@ -14,6 +14,9 @@ def ignore(expr: ir.BaseExpr) -> ir.Expr:
     return ir.Expr(type=types.unit_t, expr=expr)
 
 
+unit = ir.Expr(type=types.unit_t, expr=ir.Const(()))
+
+
 class CompilerCtx(
         namedtuple("CompilerCtx",
                    ["scope", "tc_state", "tenv", "filename", "path"])):
@@ -302,7 +305,11 @@ class Typing(ce.Eval_forall, ce.Eval_exist, ce.Eval_arrow, ce.Eval_imply,
 class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
               ce.Eval_binary, ce.Eval_list, ce.Eval_tuple, ce.Eval_record,
               ce.Eval_call, ce.Eval_attr, ce.Eval_quote, ce.Eval_loc,
-              ce.Eval_coerce):
+              ce.Eval_coerce, ce.Eval_literal):
+    def literal(module, val):
+        my_type = type_map[type(val)]
+        return ir.Expr(type=my_type, expr=ir.Const(val))
+
     def coerce(module, expr):
         expr = module.eval(expr)
         loc, _ = sexpr.unloc(expr)
@@ -321,9 +328,14 @@ class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
         raise NotImplementedError
 
     def tuple(module, elts):
+        if not elts:
+            return ir.Expr(expr=ir.Const(()), type=types.unit_t)
         if len(elts) is 1:
             return module.eval(elts[0])
-        raise NotImplementedError
+
+        elts = list(map(module.eval, elts))
+        return ir.Expr(expr=ir.Tuple(elts),
+                       type=te.Tuple(tuple(e.type for e in elts)))
 
     def list(module, elts):
         raise NotImplementedError
@@ -513,5 +525,4 @@ class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
                 self.comp_ctx.scope.require(x))
             return ir.Expr(type=my_type, expr=x)
 
-        my_type = type_map[type(x)]
-        return ir.Expr(type=my_type, expr=ir.Const(x))
+        raise TypeError(x)

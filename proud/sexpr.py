@@ -15,6 +15,8 @@ class ASTTag:
         return self.name
 
 
+
+lit_k = ASTTag("literal", ["val"])
 coerce_k = ASTTag("coerce", ["expr"])
 def_k = ASTTag("define", ["export", "gname", "type", "bound"])
 let_k = ASTTag("let", ["is_rec", "name", "type", "bound", "body"])
