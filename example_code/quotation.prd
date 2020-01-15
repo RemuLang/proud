@@ -7,6 +7,20 @@ let code2 = `($f x)
 
 export run2 = code2 {x = 2}
 
-let print = extern "print"
+let print : forall a. a -> unit  = extern "print"
+let add : string -> string -> string = extern "lambda x: lambda y: add(x, y)"
+let as_str : forall a. a -> string = extern "str"
+let repr : forall a. a -> string = extern "repr"
+let _ = print run2
 
-print run2
+let print_record1 : {x : int} -> unit =
+    | data | ->
+        let repr = add (add "{ x : " (as_str data.x)) " }"
+        in print repr
+
+let _ = print_record1 {x = 1}
+
+let print_record2 : exist a b. {x : a  | b} -> unit = | data | ->
+    print(data.x)
+
+let _ = print (repr {x = "114514", y = 2})

@@ -1,5 +1,5 @@
 from proud.core_lang.modular_compiler import Evaluator, CompilerCtx
-from proud.core_lang.lowered_to_sexpr import SExprGen
+from proud.core_lang.lowered_to_sexpr import SExprGen, resolve_type
 from proud.core_lang.scope import Sym, Scope
 from proud.parser.parser_wrap import parse
 from dataclasses import dataclass
@@ -39,6 +39,7 @@ class BackEnd:
             src = f.read()
         ast = parse(src, in_file)
         mod_expr = Modular(ctx).eval(ast)
+        resolve_type(mod_expr, ctx)
         sexpr = SExprGen().eval(mod_expr)
         code = self.codegen(ctx, sexpr)
         with open(out_file, 'w') as f:

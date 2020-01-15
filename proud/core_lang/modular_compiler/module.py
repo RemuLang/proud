@@ -98,7 +98,7 @@ class Modular(Evaluator, ce.Eval_module, ce.Eval_loc, ce.Eval_define,
             me = scope.require(name)
             name_var = tenv[me]
         else:
-            me = scope.enter(name)
+            me = scope.shadow(name)
             name_var = types.Var(loc, module.comp_ctx.filename, name)
             tenv[me] = name_var
 

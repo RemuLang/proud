@@ -89,14 +89,128 @@ store rearrange.1_140729296069296
 tuple 0
 tuple 2
 call 1
-store run2_140729296069328
+deref! run2_140729296069328
+line 10
+line 10
+const #print#
+deref! print_140729296069360
+line 11
+line 11
+const #lambda x: lambda y: add(x, y)#
+deref! add_140729296069392
+line 12
+line 12
+const #str#
+deref! as_str_140729296069424
+line 13
+line 13
+const #repr#
+deref! repr_140729296069456
+line 14
+deref print_140729296069360
+line 14
+deref run2_140729296069328
+call 1
+store __140729296069488
+line 16
+line 17
+defun
+    filename "example_code\\quotation.prd"
+    free [add_140729296069392 print_140729296069360 as_str_140729296069424]
+    args [data_140729296069520] {
+    line 17
+    line 18
+    line 18
+    deref add_140729296069392
+    line 18
+    deref add_140729296069392
+    line 18
+    const #'{ x : '#
+    call 1
+    line 18
+    deref as_str_140729296069424
+    line 18
+    line 18
+    deref data_140729296069520
+    const #0#
+    prj
+    const #0#
+    prj
+    call 1
+    call 1
+    call 1
+    line 18
+    const #' }'#
+    call 1
+    store repr_140729296069552
+    deref print_140729296069360
+    line 19
+    load repr_140729296069552
+    call 1
+    label pround.return
+    return
+}
+deref! print_record1_140729296069584
+line 21
+deref print_record1_140729296069584
+line 21
+line 21
+const #1#
+tuple 1
+tuple 0
+tuple 2
+call 1
+store __140729296069616
+line 23
+line 23
+defun
+    filename "example_code\\quotation.prd"
+    free [print_140729296069360]
+    args [data_140729296069648] {
+    line 23
+    deref print_140729296069360
+    line 24
+    line 24
+    line 24
+    load data_140729296069648
+    const #0#
+    prj
+    const #0#
+    prj
+    call 1
+    label pround.return
+    return
+}
+store print_record2_140729296069680
+line 26
+deref print_140729296069360
+line 26
+deref repr_140729296069456
+line 26
+line 26
+const #'114514'#
+line 26
+const #2#
+tuple 2
+tuple 0
+tuple 2
+call 1
+call 1
+store __140729296069712
+load __140729296069712
+deref add_140729296069392
+deref as_str_140729296069424
 load code1_140729296069072
 deref code2_140729296069232
 deref f_140729296069136
-load run2_140729296069328
-tuple 4
+deref print_140729296069360
+deref print_record1_140729296069584
+load print_record2_140729296069680
+deref repr_140729296069456
+deref run2_140729296069328
+tuple 11
 tuple 0
 tuple 2
-store TestQuote_140729296069360
+store TestQuote_140729296069744
 const #None#
 return

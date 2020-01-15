@@ -89,7 +89,8 @@ class CodeGen(ce.Eval_set, ce.Eval_func, ce.Eval_invoke, ce.Eval_loc,
               ce.Eval_goto_if_not, ce.Eval_indir, ce.Eval_addr, ce.Eval_block,
               ce.Eval_tuple, ce.Eval_list, ce.Eval_switch, ce.Eval_extern):
     def extern(module, foreign_code):
-        module("const #{}#".format(json.dumps(foreign_code)))
+        module("const #{}#".format(
+            json.decoder.py_scanstring(foreign_code, 1)[0]))
 
     def __init__(self, filename: str, backend: PyBackEnd):
         self.code = [

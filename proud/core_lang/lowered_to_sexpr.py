@@ -98,6 +98,8 @@ class SExprGen:
             return self.invoke(expr.f, expr.arg)
         if isinstance(expr, ir.Fun):
             return self.fun(expr.name, expr.filename, expr.args, expr.expr)
+        if isinstance(expr, ir.Extern):
+            return sexpr.extern_k, expr.foreign_code
         raise NotImplementedError(type(expr))
 
     def set(self, name, expr):

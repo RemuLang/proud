@@ -19,7 +19,10 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
               ce.Eval_loc, ce.Eval_coerce, ce.Eval_literal, ce.Eval_type,
               ce.Eval_extern, ce.Eval_ite):
     def extern(module, foreign_code):
-        return ir.Extern(foreign_code)
+        return ir.Expr(expr=ir.Extern(foreign_code),
+                       type=types.Var(module._loc,
+                                      module.comp_ctx.filename,
+                                      name="extern\'"))
 
     def ite(module, cond, true_clause, else_clause):
         cond = module.eval(cond)
@@ -327,7 +330,7 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
 
             my_exp = ir.Block(
                 [ignore(ir.WrapLoc(loc, ignore(ir.Set(me, bound)))), body])
-            return ir.Expr(type=my_type, expr=my_exp)
+            return ir.Expr(type=body.type, expr=my_exp)
 
     def eval_sym(self, x: str) -> ir.Expr:
         my_type = self.comp_ctx.type_of_value(self.comp_ctx.scope.require(x))
