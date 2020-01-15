@@ -178,19 +178,19 @@ class SExprGen:
                 hd, tl = x
                 sub = sym_map[depth + 1]
 
-                seq_hd = [(sexpr.set_k, sub, (sexpr.prj_k, tag, 0))]
-                seq_tl = [(sexpr.set_k, sub, (sexpr.prj_k, tag, 1))]
+                seq_hd = []
+                seq_tl = []
                 elt1 = []
                 elt2 = []
                 for i, (ith, each) in enumerate(hd):
-                    elt = [(sexpr.set_k, sub, (sexpr.prj_k, tag, ith)),
+                    elt = [(sexpr.set_k, sub, (sexpr.prj_k, (sexpr.prj_k, tag,
+                                                             0), ith)),
                            rec_gen(each, depth + 1)]
                     elt1.append((sexpr.block_k, elt))
 
-                for i, (ith, each) in enumerate(tl):
-                    elt = [(sexpr.set_k, sub, (sexpr.prj_k, tag, ith)),
-                           rec_gen(each, depth + 1)]
-                    elt2.append((sexpr.block_k, elt))
+                for i, ith in enumerate(tl):
+                    elt2.append((sexpr.prj_k, (sexpr.prj_k, tag, 0), ith))
+
                 seq_hd.append((sexpr.tuple_k, elt1))
                 seq_tl.append((sexpr.tuple_k, elt2))
                 elts.extend([(sexpr.block_k, seq_hd), (sexpr.block_k, seq_tl)])
@@ -232,18 +232,15 @@ class SExprGen:
                 elt2 = sexpr.tuple_k, []
                 i = 0
                 for i, (ith, each) in enumerate(hd):
-                    elts1[ith] = [(sexpr.block_k,
-                                   [(sexpr.set_k, sub,
-                                     (sexpr.prj_k, (sexpr.prj_k, tag, 0), i)),
-                                    rec_gen(each, depth + 1)])]
+                    elts1[ith] = (sexpr.block_k, [(sexpr.set_k, sub,
+                                                   (sexpr.prj_k, (sexpr.prj_k,
+                                                                  tag, 0), i)),
+                                                  rec_gen(each, depth + 1)])
                 for i, (ith, each) in enumerate(tl):
-                    elts1[ith] = [(sexpr.block_k,
-                                   [(sexpr.set_k, sub,
-                                     (sexpr.prj_k, (sexpr.prj_k, tag, 0), i)),
-                                    rec_gen(each, depth + 1)])]
+                    elts1[ith] = (sexpr.prj_k, (sexpr.prj_k, tag, 1), i)
 
                 elt1 = sexpr.tuple_k, tuple(
-                    e for e, _ in sorted(elts1.items(), key=_sort_key))
+                    e for _, e in sorted(elts1.items(), key=_sort_key))
                 elts.extend([elt1, elt2])
 
             return sexpr.tuple_k, elts

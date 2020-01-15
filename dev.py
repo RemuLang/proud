@@ -1,3 +1,3 @@
 from checkprd import check_code
 
-check_code("example_code/testy.prd")
+check_code("example_code/quotation.prd")

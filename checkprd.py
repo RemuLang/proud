@@ -13,9 +13,13 @@ import os
 
 def check_code(filename):
     end = PyBackEnd()
+    # try:
     end.main(filename, filename + '.sij')
+    # except Exception as e:
+    #     print(e)
+    #     pass
 
-    # tc = end.top
+    tc = end.top
     # print('checked:', Fore.GREEN)
     # for k, v in tc.tenv.items():
     #     print(k.name, ':', tc.tc_state.infer(v))

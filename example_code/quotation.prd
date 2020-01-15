@@ -24,3 +24,8 @@ let print_record2 : exist a b. {x : a  | b} -> unit = | data | ->
     print(data.x)
 
 let _ = print (repr {x = "114514", y = 2})
+
+let print_record3 : forall a b. {x : a | b} -> unit = | data | -> print data.x
+
+let _ = print_record3 {x = 5, y = 1, z = 2}
+let _ = print_record3 {aaa = 1, ll = (1, 2), x = 2}

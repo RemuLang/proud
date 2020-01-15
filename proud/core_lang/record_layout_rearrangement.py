@@ -48,7 +48,7 @@ def rec_polymorphize(require: te.T, actual: te.T):
             return None
 
         tl = tuple(
-            k for k, _ in sorted(actual_fields.items(), key=lambda x: x[1]))
+            i for _, i in sorted(actual_fields.items(), key=lambda x: x[1]))
 
         return [tuple(ret), tl]
     return None
@@ -86,7 +86,7 @@ def rec_monomorphize(require: te.T, actual: te.T):
         if check_normalized(hd) and not require_fields:
             return None
 
-        tl = tuple(k for k, _ in sorted(require_fields, key=lambda x: x[1]))
+        tl = tuple(i for _, i in sorted(require_fields, key=lambda x: x[1]))
         return [tuple(hd), tl]
 
     return None
