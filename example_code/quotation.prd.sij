@@ -110,7 +110,7 @@ line 16
 line 17
 defun
     filename "example_code\\quotation.prd"
-    free [as_str_140729296069424 add_140729296069392 print_140729296069360]
+    free [as_str_140729296069424 print_140729296069360 add_140729296069392]
     args [data_140729296069520] {
     line 17
     line 18
@@ -192,16 +192,33 @@ call 1
 call 1
 store __140729296069712
 line 28
+deref print_140729296069360
 line 28
+line 28
+line 28
+const #'114514'#
+line 28
+const #2#
+tuple 2
+tuple 0
+tuple 2
+const #0#
+prj
+const #0#
+prj
+call 1
+store __140729296069744
+line 30
+line 30
 defun
     filename "example_code\\quotation.prd"
     free [print_140729296069360]
-    args [data_140729296069744] {
-    line 28
+    args [data_140729296069776] {
+    line 30
     deref print_140729296069360
-    line 28
-    line 28
-    load data_140729296069744
+    line 30
+    line 30
+    load data_140729296069776
     const #0#
     prj
     const #0#
@@ -210,34 +227,34 @@ defun
     label pround.return
     return
 }
-deref! print_record3_140729296069776
-line 30
-deref print_record3_140729296069776
-line 30
-line 30
+deref! print_record3_140729296069808
+line 32
+deref print_record3_140729296069808
+line 32
+line 32
 const #5#
-line 30
+line 32
 const #1#
-line 30
+line 32
 const #2#
 tuple 3
 tuple 0
 tuple 2
-store rearrange.0_140729296069808
-load rearrange.0_140729296069808
+store rearrange.0_140729296069840
+load rearrange.0_140729296069840
 const #0#
 prj
 const #0#
 prj
-store rearrange.1_140729296069840
-load rearrange.1_140729296069840
+store rearrange.1_140729296069872
+load rearrange.1_140729296069872
 tuple 1
-load rearrange.0_140729296069808
+load rearrange.0_140729296069840
 const #0#
 prj
 const #1#
 prj
-load rearrange.0_140729296069808
+load rearrange.0_140729296069840
 const #0#
 prj
 const #2#
@@ -245,38 +262,38 @@ prj
 tuple 2
 tuple 2
 call 1
-store __140729296069872
-line 31
-deref print_record3_140729296069776
-line 31
-line 31
+store __140729296069904
+line 33
+deref print_record3_140729296069808
+line 33
+line 33
 const #1#
-line 31
-line 31
+line 33
+line 33
 const #1#
-line 31
+line 33
 const #2#
 tuple 2
-line 31
+line 33
 const #2#
 tuple 3
 tuple 0
 tuple 2
-store rearrange.0_140729296069904
-load rearrange.0_140729296069904
+store rearrange.0_140729296069936
+load rearrange.0_140729296069936
 const #0#
 prj
 const #2#
 prj
-store rearrange.1_140729296069936
-load rearrange.1_140729296069936
+store rearrange.1_140729296069968
+load rearrange.1_140729296069968
 tuple 1
-load rearrange.0_140729296069904
+load rearrange.0_140729296069936
 const #0#
 prj
 const #0#
 prj
-load rearrange.0_140729296069904
+load rearrange.0_140729296069936
 const #0#
 prj
 const #1#
@@ -284,8 +301,8 @@ prj
 tuple 2
 tuple 2
 call 1
-store __140729296069968
-load __140729296069968
+store __140729296070000
+load __140729296070000
 deref add_140729296069392
 deref as_str_140729296069424
 load code1_140729296069072
@@ -294,12 +311,12 @@ deref f_140729296069136
 deref print_140729296069360
 deref print_record1_140729296069584
 load print_record2_140729296069680
-deref print_record3_140729296069776
+deref print_record3_140729296069808
 deref repr_140729296069456
 deref run2_140729296069328
 tuple 12
 tuple 0
 tuple 2
-store TestQuote_140729296070000
+store TestQuote_140729296070032
 const #None#
 return

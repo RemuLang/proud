@@ -74,8 +74,11 @@ expr : 'let' pat '=' expr 'in' expr                  { loc_((let_k, False, $1, N
      | 'rec' pat '=' expr 'in' expr                  { loc_((let_k, True, $1, None, $3, $5), $0) }
      | 'rec' pat ':' type '=' expr 'in' expr         { loc_((let_k, True, $1, $3, $5, $7), $0) }
      | 'if' expr 'then' expr 'else' expr             { loc_((ite_k, $1, $3, $5), $0) }
-     | 'fun' pat ml_lambda_typed  '->' expr          { loc_((lambda_k, $1, $2, $4), $0) }
+
+     # lambda
+     | 'fun' pat ml_lambda_typed  expr              { loc_((lambda_k, $1, $2, $3), $0) }
      | '|' lambda                                    { loc_($1, $0) }
+
      | expr 'match' list(case)                       { loc_((match_k, $0, tuple($2)), $1) }
      | binary_operations                             { $0 }
 
