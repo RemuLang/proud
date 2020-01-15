@@ -100,6 +100,7 @@ class GotoIfNot:
     def __repr__(self):
         return 'goto {} if not'
 
+
 # @derive.post_visitor(lambda _, __, s: s == 'Expr')
 # @derive.pre_visitor(lambda _, __, s: s == 'Expr')
 @dataclass
@@ -111,6 +112,8 @@ class Switch:
         line1 = 'switch {}\n'.format(self.target)
         line2 = '\n'.join('{} : {}'.format(i, n.name) for i, n in self.cases)
         return line1 + line2
+
+
 # @derive.post_visitor(lambda _, __, s: s == 'Expr')
 # @derive.pre_visitor(lambda _, __, s: s == 'Expr')
 @dataclass
@@ -126,6 +129,7 @@ class Fun:
         line3 = "end"
         return line1 + line2 + line3
 
+
 # @derive.post_visitor(lambda _, __, s: s == 'Expr')
 # @derive.pre_visitor(lambda _, __, s: s == 'Expr')
 @dataclass
@@ -134,6 +138,7 @@ class Const:
 
     def __repr__(self):
         return repr(self.value)
+
 
 # @derive.post_visitor(lambda _, __, s: s == 'Expr')
 # @derive.pre_visitor(lambda _, __, s: s == 'Expr')
@@ -156,6 +161,7 @@ class WrapLoc:
         line1 = 'loc {}\n'.format(self.loc)
         line2 = repr(self.expr)
         return line1 + line2
+
 
 # @derive.post_visitor(lambda _, __, s: s == 'Expr')
 # @derive.pre_visitor(lambda _, __, s: s == 'Expr')
@@ -183,6 +189,7 @@ class Coerce:
 class Field:
     base: 'Expr'
     attr: str
+
     def __repr__(self):
         return '{}.{}'.format(self.base, self.attr)
 

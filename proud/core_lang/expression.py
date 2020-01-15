@@ -50,9 +50,14 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
 
         for attr_name, each in scope.freevars.items():
             record_fields.append((each, attr_name, tenv[each]))
-        arg_type = te.Record(
-            te.row_from_list([(attr, t) for _, attr, t in record_fields],
-                             te.empty_row))
+        rho_group = types.ForallScope(module._loc,
+                                      filename=module.comp_ctx.filename)
+        rho = te.Fresh('ρ', rho_group)
+        arg_type = te.Forall(
+            rho_group, (rho, ),
+            te.Record(
+                te.row_from_list([(attr, t) for _, attr, t in record_fields],
+                                 te.RowPoly(rho))))
         module.comp_ctx.tc_state.unify(name_var, arg_type)
         arg_expr = ir.Expr(type=arg_type, expr=arg_sym)
         block = [
