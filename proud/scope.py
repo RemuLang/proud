@@ -34,17 +34,32 @@ class Sym(namedtuple("Sym", ["name", "uid", "is_cell"])):
     uid: object
     is_cell: Ref[bool]
 
-class Scope(
-        namedtuple("Scope",
-                   ["freevars", "boundvars", "hold_bound", "parent"])):
+
+class Scope:
     freevars: t.Dict[str, Sym]
     boundvars: t.Dict[str, Sym]
     hold_bound: bool
     parent: t.Optional['Scope']
+    allow_external: bool
+
+    def __init__(self,
+                 hold_bound: bool,
+                 parent: 't.Optional[Scope]',
+                 *,
+                 allow_external: bool = False):
+        self.freevars = {}
+        self.boundvars = {}
+        self.hold_bound = hold_bound
+        self.parent = parent
+        self.allow_external = allow_external
 
     @classmethod
     def top(cls):
-        return cls({}, {}, True, None)
+        return cls(True, None)
+
+    @classmethod
+    def top_support_external(cls):
+        return cls(True, None, allow_external=True)
 
     def require(self, name: str) -> Sym:
         ...
@@ -86,9 +101,11 @@ def require(scope: Scope, name: str) -> Sym:
         var.is_cell.contents = True
         return var
     # external
-    var = Sym(name, object(), Ref(False))
-    scope.freevars[name] = var
-    return var
+    if scope.allow_external:
+        var = Sym(name, object(), Ref(False))
+        scope.freevars[name] = var
+        return var
+    raise Undef(name)
 
 
 def enter(scope: Scope, name: str) -> Sym:
@@ -106,7 +123,7 @@ def shadow(scope: Scope, name: str) -> Sym:
 
 
 def sub_scope(scope: Scope, hold_bound=False):
-    return Scope(OrderedDict(), OrderedDict(), hold_bound, scope)
+    return Scope(hold_bound, scope)
 
 
 Scope.require = require

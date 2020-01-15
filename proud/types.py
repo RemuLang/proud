@@ -1,5 +1,4 @@
 from hybridts import type_encoding as te
-import typing
 # (a : type b) implies ((x : a) implies (x : b))
 # for "value as type".
 # This is not achieve in type system, but the compiler.
@@ -32,11 +31,14 @@ class Nom(te.Nom):
 
 
 class ForallScope(te.ForallGroup):
-    def __init__(self, loc, filename):
+    def __init__(self, loc=None, filename=None):
         self.loc = loc
         self.filename = filename
 
     def __repr__(self):
+        if self.filename is None:
+            return '<forall>'
+
         return '<forall{}>'.format(
             show_loc(loc=self.loc, filename=self.filename))
 
@@ -80,3 +82,7 @@ list_t = Nom("list")
 complex_t = Nom("complex")
 bool_t = Nom("bool")
 unit_t = Nom("unit")
+
+_bot_forall_scope = ForallScope()
+_bot_bound = te.Fresh("a", _bot_forall_scope)
+bot = te.Forall(_bot_forall_scope, (_bot_bound, ), _bot_bound)
