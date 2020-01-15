@@ -1,8 +1,9 @@
 import hybridts.type_encoding as te
 import proud.scope as scope
-from proud import derive
-from dataclasses import dataclass
 import typing as t
+from proud import sexpr
+from dataclasses import dataclass
+DEBUG = False
 
 
 class LabelName:
@@ -17,6 +18,8 @@ class LabelName:
 
 # @derive.post_visitor(lambda _, __, s: s == 'Expr')
 # @derive.pre_visitor(lambda _, __, s: s == 'Expr')
+
+
 @dataclass
 class Instance:
     inst_t: te.T
@@ -120,7 +123,7 @@ class Switch:
 class Fun:
     name: str
     filename: str
-    args: t.List[scope.Sym]
+    args: scope.Sym
     expr: 'Expr'
 
     def __repr__(self):
@@ -138,16 +141,6 @@ class Const:
 
     def __repr__(self):
         return repr(self.value)
-
-
-# @derive.post_visitor(lambda _, __, s: s == 'Expr')
-# @derive.pre_visitor(lambda _, __, s: s == 'Expr')
-@dataclass
-class Loc:
-    loc: object
-
-    def __repr__(self):
-        return "loc {}".format(self.loc)
 
 
 # @derive.post_visitor(lambda _, __, s: s == 'Expr')
@@ -195,6 +188,24 @@ class Field:
 
 
 @dataclass
+class Polymorphization:
+    layout_type: te.T
+    expr: 'Expr'
+
+    def __repr__(self):
+        return 'poly {} by {}'.format(self.expr, self.layout_type)
+
+
+@dataclass
+class Momomorphization:
+    layout_type: te.T
+    expr: 'Expr'
+
+    def __repr__(self):
+        return 'mono {} by {}'.format(self.expr, self.layout_type)
+
+
+@dataclass
 class Merge:
     """
     record merge
@@ -207,8 +218,58 @@ class Merge:
 
 
 BaseExpr = t.Union[Fun, Switch, Goto, GotoIf, GotoIfNot, Label, Invoke,
-                   WrapLoc, Block, Set, Instance, Const, Loc, scope.Sym, Tuple,
-                   Coerce, Field, Merge]
+                   WrapLoc, Block, Set, Instance, Const, scope.Sym, Tuple,
+                   Coerce, Field, Merge, Polymorphization, Momomorphization]
+
+LeafBaseExpr = (Goto, Label, scope.Sym, Const)
+
+
+def visit_expr(action):
+    def recurse_base(expr: BaseExpr) -> None:
+        if isinstance(expr, LeafBaseExpr):
+            return
+        if isinstance(expr, (Polymorphization, Momomorphization)):
+            return recurse(expr.expr)
+        if isinstance(expr, Fun):
+            return recurse(expr.expr)
+        if isinstance(expr, Switch):
+            return recurse(expr.target)
+        if isinstance(expr, GotoIf):
+            return recurse(expr.expr)
+        if isinstance(expr, GotoIfNot):
+            return recurse(expr.expr)
+        if isinstance(expr, Invoke):
+            recurse(expr.f)
+            recurse(expr.arg)
+            return
+        if isinstance(expr, WrapLoc):
+            return recurse(expr.expr)
+        if isinstance(expr, (Block, Tuple)):
+            for elt in expr.elts:
+                recurse(elt)
+            return
+        if isinstance(expr, Set):
+            return recurse(expr.expr)
+        if isinstance(expr, Instance):
+            raise NotImplementedError
+        if isinstance(expr, Coerce):
+            return recurse(expr.target)
+        if isinstance(expr, Field):
+            return recurse(expr.base)
+        if isinstance(expr, Merge):
+            recurse(expr.left)
+            recurse(expr.right)
+            return
+        if isinstance(expr, str):
+            return
+        raise TypeError(type(expr))
+
+    def recurse(e: Expr) -> None:
+        action(e)
+        expr = e.expr
+        recurse_base(expr)
+
+    return recurse
 
 
 # @derive.post_visitor(lambda _, __, s: s == BaseExpr)

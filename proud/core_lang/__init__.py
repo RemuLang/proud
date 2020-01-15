@@ -6,7 +6,9 @@ from hybridts import type_encoding as te
 from contextlib import contextmanager
 import proud.lowered_ir as ir
 import typing
-__all__ = ['ignore', 'unit', 'CompilerCtx', 'keep', 'type_map', 'Evaluator']
+__all__ = [
+    'ignore', 'unit', 'CompilerCtx', 'keep', 'type_map', 'Evaluator', 'anyway'
+]
 
 type_map = {
     int: types.bigint_t,
@@ -60,6 +62,10 @@ def keep(self):
         yield
     finally:
         self.comp_ctx = comp
+
+
+def anyway(x: ir.BaseExpr):
+    return ir.Expr(expr=x, type=types.unit_t)
 
 
 class Evaluator:

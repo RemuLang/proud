@@ -15,7 +15,6 @@ class ASTTag:
         return self.name
 
 
-
 lit_k = ASTTag("literal", ["val"])
 coerce_k = ASTTag("coerce", ["expr"])
 def_k = ASTTag("define", ["export", "gname", "type", "bound"])
@@ -47,6 +46,7 @@ attr_k = ASTTag("attr", ["base", ("attr_name", "builtins.str")])
 module_k = ASTTag("module", ['is_rec', "name", "stmts"])
 mutual_k = ASTTag("mutual", ['cases', 'expr'])
 
+
 def unloc(e):
     if isinstance(e, tuple) and e and e[0] is loc_k:
         a, b = unloc(e[2])
@@ -74,7 +74,7 @@ switch_k = ASTTag("switch", ["target", "cases", "default"])
 
 lowered = [
     set_k, func_k, invoke_k, prj_k, label_k, goto_if_k, goto_if_not_k, goto_k,
-    indir_k, addr_k, block_k, loc_k, tuple_k, list_k, switch_k, type_k, attr_k
+    indir_k, addr_k, block_k, loc_k, tuple_k, list_k, switch_k, type_k
 ]
 
 

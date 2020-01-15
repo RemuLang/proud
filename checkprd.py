@@ -1,6 +1,7 @@
 from proud.parser_wrap import parse
 from proud.basic_impl import Modular
 from proud.core_lang import CompilerCtx
+from proud.lowered_to_sexpr import resolve_type
 from proud import types
 from hybridts import type_encoding as te, exc
 # from hybridts.tc_make import RigidStructureKeeper
@@ -42,11 +43,11 @@ def check_code(filename):
     try:
         lowered_ir = modular.eval(mod)
     except exc.TypeMismatch as e:
+        lowered_ir = None
         print(Fore.RED)
         print(e)
         print(Style.RESET_ALL)
         err = format_exc()
-
 
     tc = comp_ctx.tc_state
     print('checked:', Fore.GREEN)
@@ -60,6 +61,11 @@ def check_code(filename):
     # print(repr(lowered_ir))
     if err:
         print(err)
+
+    if lowered_ir:
+        resolve_type(lowered_ir, comp_ctx)
+        print(lowered_ir)
+
 
 if __name__ == '__main__':
     call(check_code)

@@ -8,9 +8,8 @@ dispatcher = ce.dispatcher
 
 class Numbering(dict):
     def __missing__(self, key):
-        v = self[key] =  len(self)
+        v = self[key] = len(self)
         return v
-
 
 
 class Codegen(ce.Eval_set, ce.Eval_func, ce.Eval_invoke, ce.Eval_loc,

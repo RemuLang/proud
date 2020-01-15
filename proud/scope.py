@@ -40,26 +40,22 @@ class Scope:
     boundvars: t.Dict[str, Sym]
     hold_bound: bool
     parent: t.Optional['Scope']
-    allow_external: bool
+    allow_reassign: bool
 
     def __init__(self,
                  hold_bound: bool,
                  parent: 't.Optional[Scope]',
                  *,
-                 allow_external: bool = False):
+                 allow_reassign=False):
         self.freevars = {}
         self.boundvars = {}
         self.hold_bound = hold_bound
         self.parent = parent
-        self.allow_external = allow_external
+        self.allow_reassign = allow_reassign
 
     @classmethod
-    def top(cls):
-        return cls(True, None)
-
-    @classmethod
-    def top_support_external(cls):
-        return cls(True, None, allow_external=True)
+    def top(cls, *, allow_reassign=False):
+        return cls(True, None, allow_reassign=allow_reassign)
 
     def require(self, name: str) -> Sym:
         ...
@@ -88,7 +84,7 @@ class Scope:
 
 
 def require(scope: Scope, name: str) -> Sym:
-    assert isinstance(name, str), name
+    assert isinstance(name, (str, tuple)), name
     var = scope.boundvars.get(name, None)
     if var is not None:
         return var
@@ -100,30 +96,28 @@ def require(scope: Scope, name: str) -> Sym:
         scope.freevars[name] = var
         var.is_cell.contents = True
         return var
-    # external
-    if scope.allow_external:
-        var = Sym(name, object(), Ref(False))
-        scope.freevars[name] = var
-        return var
+
     raise Undef(name)
 
 
 def enter(scope: Scope, name: str) -> Sym:
-    assert isinstance(name, str), name
+    assert isinstance(name, (str, tuple)), name
     if name in scope.boundvars:
+        if scope.allow_reassign:
+            return scope.boundvars[name]
         raise BindTwice(name)
     s = scope.boundvars[name] = Sym(name, object(), Ref(False))
     return s
 
 
 def shadow(scope: Scope, name: str) -> Sym:
-    assert isinstance(name, str), name
+    assert isinstance(name, (str, tuple)), name
     s = scope.boundvars[name] = Sym(name, object(), Ref(False))
     return s
 
 
 def sub_scope(scope: Scope, hold_bound=False):
-    return Scope(hold_bound, scope)
+    return Scope(hold_bound, scope, allow_reassign=scope.allow_reassign)
 
 
 Scope.require = require

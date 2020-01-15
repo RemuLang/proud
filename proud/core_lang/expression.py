@@ -1,5 +1,5 @@
 from proud import composable_evaluator as ce
-from proud import excs, sexpr
+from proud import sexpr
 from proud import lowered_ir as ir
 from proud import types
 from proud.core_lang import *
@@ -10,6 +10,7 @@ import typing
 try:
     # noinspection PyUnresolvedReferences
     from proud.core_lang.typing import Typing
+    # noinspection PyUnresolvedReferences
     from proud.core_lang.quotation import Quote
 except ImportError:
     pass
@@ -66,7 +67,7 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
             for each, attr, t in record_fields
         ]
         block.append(quote_expr)
-        ret_expr = ir.Fun("<quote>", module.comp_ctx.filename, [arg_sym],
+        ret_expr = ir.Fun("<quote>", module.comp_ctx.filename, arg_sym,
                           ir.Expr(expr=ir.Block(block), type=quote_expr.type))
         ret_type = te.Arrow(arg_type, quote_expr.type)
         return ir.Expr(expr=ret_expr,
@@ -74,6 +75,7 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
 
     def attr(module, base, attr_name: str):
         base = module.eval(base)
+        tc_state = module.comp_ctx.tc_state
         var = types.Var(loc=module._loc,
                         filename=module.comp_ctx.filename,
                         name=attr_name + ".getter")
@@ -82,7 +84,11 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
                         name=attr_name + ".tho")
         record_type = te.Record(
             te.row_from_list([(attr_name, var)], te.RowPoly(tho)))
-        module.comp_ctx.tc_state.unify(record_type, base.type)
+
+        # TODO: how to deal with a polymorphic record value?
+        # e.g., forall a. {x : a}
+        tc_state.unify(record_type,
+                       tc_state.inst_without_structure_preserved(base.type)[1])
         return ir.Expr(expr=ir.Field(base=base, attr=attr_name), type=var)
 
     def record(module, pairs, row):
@@ -96,7 +102,10 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
         elts = [elt for _, elt in kv]
         mono = te.Record(
             te.row_from_list([(k, v.type) for k, v in kv], te.empty_row))
-        left = ir.Expr(expr=ir.Tuple(elts), type=mono)
+        left = ir.Tuple(elts)
+        left = ir.Expr(expr=ir.Tuple([anyway(left),
+                                      anyway(ir.Tuple([]))]),
+                       type=mono)
 
         if not row:
             return left
@@ -147,6 +156,15 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
         f.type = tc_state.infer(f.type)
         arg.type = tc_state.infer(arg.type)
 
+        to_mono = None
+        to_poly = None
+        if isinstance(f.type, te.Forall) and isinstance(
+                f.type.poly_type, te.Arrow):
+            # layout of record might change correspondingly.
+            func = f.type.poly_type
+            to_mono = func.ret
+            to_poly = func.arg
+
         _, f_type = tc_state.inst_without_structure_preserved(f.type)
         f_type = tc_state.infer(f_type)
 
@@ -155,6 +173,7 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
             f_inst = f_type.witness
             f_type = f_type.type
             assert not isinstance(f_type, te.Implicit)
+
         if isinstance(arg.type, te.Forall):
             arg_map, arg_type = tc_state.inst_without_structure_preserved(
                 arg.type)
@@ -171,8 +190,7 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
 
         inst_arrow = te.Arrow(arg_type, ret_t)
         tc_state.unify(inst_arrow, f_type)
-        a = tc_state.infer(inst_arrow)
-        b = tc_state.infer(f_type)
+
         if arg_map:
             gen_bounds = {}
             forall_scope = types.ForallScope(module._loc,
@@ -207,6 +225,7 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
                 arg_type = te.Forall(forall_scope, bounds,
                                      te.pre_visit(_subst)((), arg_type))
 
+        f.type, f_type = f_type, f.type
         if f_inst:
             f = ir.Expr(type=f_type,
                         expr=ir.Instance(f_inst, module.comp_ctx.scope, f))
@@ -220,7 +239,13 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
         else:
             arg.type = arg_type
 
-        return ir.Expr(type=ret_t, expr=ir.Invoke(f, arg))
+        if to_poly:
+            arg = ir.Polymorphization(layout_type=to_poly, expr=arg)
+
+        ret = ir.Expr(type=ret_t, expr=ir.Invoke(f, arg))
+        if to_mono:
+            ret = ir.Momomorphization(layout_type=to_mono, expr=ret)
+        return ret
 
     def lam(module, arg, type, ret):
         loc, name = sexpr.unloc(arg)
@@ -243,7 +268,6 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
             ret = module.eval(ret)
             my_type = te.Arrow(arg_t, ret.type)
 
-            freevars = list(sub_scope.freevars.values())
             name = "{} |{}|".format(path, name)
             me = ir.Fun(name, filename, arg_e, ret)
             return ir.Expr(type=my_type, expr=me)
@@ -287,8 +311,7 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
             body = module.eval(body)
 
             my_exp = ir.Block(
-                [ignore(ir.Loc(loc)),
-                 ignore(ir.Set(me, bound)), body])
+                [ignore(ir.WrapLoc(loc, ignore(ir.Set(me, bound)))), body])
             return ir.Expr(type=my_type, expr=my_exp)
 
     def eval_sym(self, x: str) -> ir.Expr:

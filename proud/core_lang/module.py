@@ -23,7 +23,6 @@ def _sort_key(expr: ir.Expr):
 
 
 class Modular(Evaluator, ce.Eval_module, ce.Eval_loc, ce.Eval_define):
-
     def loc(module, location, contents):
         assert sexpr.is_ast(contents) and contents[0] is sexpr.module_k
         return module.eval(contents)
@@ -138,14 +137,16 @@ class Modular(Evaluator, ce.Eval_module, ce.Eval_loc, ce.Eval_define):
                                              filename=filename)
                 tenv[sym_typename] = te.App(types.type_type, nom_typename)
 
-                in_append(ignore(ir.Loc(loc)))
-
                 in_append(
                     ignore(
-                        ir.Set(
-                            sym_typename,
-                            ir.Expr(type=nom_typename,
-                                    expr=ir.Const(nom_typename)))))
+                        ir.WrapLoc(
+                            loc,
+                            ir.Expr(type=types.unit_t,
+                                    expr=ir.Set(
+                                        sym_typename,
+                                        ir.Expr(
+                                            type=nom_typename,
+                                            expr=ir.Const(nom_typename)))))))
 
             syms = scope_inside.get_newest_bounds()
             # module is a record
@@ -159,7 +160,11 @@ class Modular(Evaluator, ce.Eval_module, ce.Eval_loc, ce.Eval_define):
                 module_type = te.Record(mod_row)
             elts = [ir.Expr(type=tenv[sym], expr=sym) for sym in syms]
             elts.sort(key=_sort_key)
-            in_append(ir.Expr(type=module_type, expr=ir.Tuple(elts)))
+            in_append(
+                ir.Expr(type=module_type,
+                        expr=ir.Tuple(
+                            [anyway(ir.Tuple(elts)),
+                             anyway(ir.Tuple([]))])))
 
         if not is_rec:
             mod_record_sym = prev_comp_ctx.scope.enter(name)
@@ -292,4 +297,3 @@ class Typing(ce.Eval_forall, ce.Eval_exist, ce.Eval_arrow, ce.Eval_imply,
     def __init__(self, comp_ctx: CompilerCtx):
         self.comp_ctx = comp_ctx
         self._loc = None
-
