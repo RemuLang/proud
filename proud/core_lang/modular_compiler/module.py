@@ -1,18 +1,13 @@
-from proud import composable_evaluator as ce
-from proud import excs, sexpr
-from proud import lowered_ir as ir
-from proud.scope import Scope, Sym
-from proud import types
-from proud.core_lang import *
-from hybridts.tc_state import TCState
+from proud import excs
+from proud.core_lang import sexpr, lowered_ir as ir, composable_evaluator as ce, types
+from proud.core_lang.scope import Sym
+from proud.core_lang.modular_compiler import *
 from hybridts import type_encoding as te
-from collections import namedtuple
-from contextlib import contextmanager
 import typing
 
 try:
     # noinspection PyUnresolvedReferences
-    from proud.core_lang.expression import Express
+    from proud.core_lang.modular_compiler.expression import Express
 except ImportError:
     pass
 

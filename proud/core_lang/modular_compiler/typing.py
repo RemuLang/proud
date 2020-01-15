@@ -1,13 +1,12 @@
-from proud import composable_evaluator as ce
-from proud import excs, sexpr
-from proud import types
-from proud.core_lang import *
+from proud.core_lang import sexpr, composable_evaluator as ce, types
+from proud import excs
+from proud.core_lang.modular_compiler import *
 from hybridts import type_encoding as te
 import typing
 
 try:
     # noinspection PyUnresolvedReferences
-    from proud.core_lang.expression import Express
+    from proud.core_lang.modular_compiler.expression import Express
 except ImportError:
     pass
 

@@ -3,7 +3,7 @@ names shall case no ambiguities when using this scope
 """
 
 import typing as t
-from proud.scope import Sym, Undef
+from proud.core_lang.scope import Sym, Undef
 
 
 class UniqueScope:

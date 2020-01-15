@@ -1,17 +1,14 @@
-from proud import composable_evaluator as ce
-from proud import sexpr
-from proud import lowered_ir as ir
-from proud import types
-from proud.core_lang import *
-from proud.scope import Scope
+from proud.core_lang import sexpr, lowered_ir as ir, composable_evaluator as ce, types
+from proud.core_lang.scope import Scope
 from hybridts import type_encoding as te
+from proud.core_lang.modular_compiler import *
 import typing
 
 try:
     # noinspection PyUnresolvedReferences
-    from proud.core_lang.typing import Typing
+    from proud.core_lang.modular_compiler.typing import Typing
     # noinspection PyUnresolvedReferences
-    from proud.core_lang.quotation import Quote
+    from proud.core_lang.modular_compiler.quotation import Quote
 except ImportError:
     pass
 

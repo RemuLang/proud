@@ -1,6 +1,6 @@
-from proud import composable_evaluator as ce
-from proud.sexpr import ASTTag, is_ast
-from proud.scope import Sym
+from proud.core_lang import composable_evaluator as ce
+from proud.core_lang.sexpr import is_ast
+from proud.core_lang.scope import Sym
 import json
 
 dispatcher = ce.dispatcher

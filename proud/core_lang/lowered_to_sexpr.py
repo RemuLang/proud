@@ -1,11 +1,12 @@
-from proud.lowered_ir import *
-from proud import lowered_ir as ir
-from proud.types import type_type
-from proud.core_lang import CompilerCtx
-from proud.unique_scope import UniqueScope
-from proud.record_layout_rearrangement import polymorphize, monomorphize
+from proud.core_lang.lowered_ir import *
+from proud.core_lang.types import type_type
+from proud.core_lang.unique_scope import UniqueScope
+from proud.core_lang import sexpr
+from proud.core_lang.record_layout_rearrangement import polymorphize, monomorphize
+from proud.core_lang.modular_compiler import CompilerCtx
 from hybridts.type_encoding import pre_visit
 from contextlib import contextmanager
+import proud.core_lang.lowered_ir as ir
 import typing
 empty_record = te.Record(te.empty_row)
 type_obj = (te.App, te.Arrow, te.Var, te.Nom, te.Fresh, te.Tuple, te.Forall,

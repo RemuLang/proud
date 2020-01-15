@@ -1,7 +1,7 @@
 import builtins
 import abc
 from typing import Tuple
-from proud.sexpr import *
+from proud.core_lang.sexpr import *
 from typing_extensions import Protocol
 dispatcher = {}
 

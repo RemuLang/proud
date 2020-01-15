@@ -1,6 +1,5 @@
-from proud import sexpr
+from proud.core_lang import sexpr
 from yapf.yapflib.yapf_api import FormatCode
-from pyperclip import copy
 
 
 def generate(self: sexpr.ASTTag):
@@ -39,5 +38,5 @@ for k, v in sexpr.__dict__.items():
         code.append(f'dispatcher[{k}] = {v.name}')
 
 
-with open('proud/composable_evaluator.py', 'w') as f:
+with open('proud/core_lang/composable_evaluator.py', 'w') as f:
     f.write(FormatCode('\n'.join(code))[0])

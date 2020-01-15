@@ -1,6 +1,6 @@
-from proud.parser_gen import *
-from proud.sexpr import loc_k
-from proud import sexpr
+from proud.parser.parser_gen import *
+from proud.core_lang.sexpr import loc_k
+from proud.core_lang import sexpr
 from rbnf_rts.rts import Tokens, State
 from rbnf_rts.token import Token
 from rbnf_rts.routine import DQString

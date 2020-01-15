@@ -1,7 +1,6 @@
 import hybridts.type_encoding as te
-import proud.scope as scope
+import proud.core_lang.scope as scope
 import typing as t
-from proud import sexpr
 from dataclasses import dataclass
 DEBUG = False
 

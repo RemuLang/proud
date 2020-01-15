@@ -1,6 +1,4 @@
 import typing as t
-from collections import namedtuple, OrderedDict
-from proud import derive
 
 T = t.TypeVar('T')
 
@@ -27,8 +25,6 @@ class Ref(t.Generic[T]):
         self.contents = v
 
 
-@derive.pre_visitor(lambda _, __, ___: False)
-@derive.post_visitor(lambda _, __, ___: False)
 class Sym:
     name: str
     uid: object

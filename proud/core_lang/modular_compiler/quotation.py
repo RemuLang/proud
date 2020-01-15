@@ -1,8 +1,6 @@
-from proud.core_lang.expression import Express
-from proud import composable_evaluator as ce
-from proud import scope
-from proud import types
-from proud.core_lang import *
+from proud.core_lang.modular_compiler.expression import Express
+from proud.core_lang import scope, composable_evaluator as ce, types
+from proud.core_lang.modular_compiler import *
 
 
 class Quote(Express, ce.Eval_unquote):

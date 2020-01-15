@@ -89,6 +89,6 @@ load run2_140729296069328
 tuple 1
 tuple 0
 tuple 2
-print
+store TestQuote_140729296069360
 const #None#
 return
