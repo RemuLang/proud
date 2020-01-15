@@ -1,9 +1,10 @@
 from proud.core_lang import composable_evaluator as ce
-from proud.core_lang.lowered_ir import Expr
 from proud.core_lang.modular_compiler import CompilerCtx
 from proud.core_lang.sexpr import is_ast
-from proud.core_lang.scope import Sym
+from proud.core_lang.scope import Sym, Scope
+from proud.core_lang import types
 from proud.backend_interface import BackEnd, ModuleFinder
+from hybridts import type_encoding as te
 import json
 import typing
 import os
@@ -18,11 +19,19 @@ class Numbering(dict):
 
 
 class PyBackEnd(BackEnd):
+    top: typing.Optional[CompilerCtx]
+
+    def mk_top_scope(self) -> Scope:
+        if not self.top:
+            raise ValueError
+        return self.top.scope.sub_scope(hold_bound=True)
+
     def remember_module(self, path, mod_sym: Sym) -> None:
         self.modules[path].exist = mod_sym
 
     def __init__(self):
         self.modules: typing.Dict[str, ModuleFinder] = {}
+        self.top = None
 
     def search_module(self, qualname: typing.List[str]) -> ModuleFinder:
         path = '.'.join(qualname)
@@ -50,16 +59,38 @@ class PyBackEnd(BackEnd):
         raise IOError("Unknown module {}".format(path))
 
     def init_compiler_ctx(self, filename, path) -> CompilerCtx:
-        return CompilerCtx.top(filename, path, self)
+        comp_ctx: CompilerCtx = CompilerCtx.top("builtin", "builtin", self)
+        sym = comp_ctx.scope.enter("int")
+        comp_ctx.tenv[sym] = te.App(types.type_type, types.int_t)
+        sym = comp_ctx.scope.enter("string")
+        comp_ctx.tenv[sym] = te.App(types.type_type, types.string_t)
+        sym = comp_ctx.scope.enter("bool")
+        comp_ctx.tenv[sym] = te.App(types.type_type, types.bool_t)
+        sym = comp_ctx.scope.enter("float")
+        comp_ctx.tenv[sym] = te.App(types.type_type, types.float_t)
+        sym = comp_ctx.scope.enter("unit")
+        comp_ctx.tenv[sym] = te.App(types.type_type, types.unit_t)
+        sym = comp_ctx.scope.enter("value")
+        comp_ctx.tenv[sym] = te.App(types.type_type, types.type_type)
+        sym = comp_ctx.scope.enter("list")
+        comp_ctx.tenv[sym] = te.App(types.type_type, types.list_t)
+        self.top = comp_ctx
+        return CompilerCtx(self.mk_top_scope(), comp_ctx.tc_state,
+                           comp_ctx.tenv, filename, path, self)
 
     def codegen(self, compiler_ctx: CompilerCtx, sexpr) -> str:
-        return CodeGen(compiler_ctx.filename, backend=self).eval(sexpr)
+        generator = CodeGen(compiler_ctx.filename, backend=self)
+        generator.eval(sexpr)
+        return generator.feed_code()
 
 
 class CodeGen(ce.Eval_set, ce.Eval_func, ce.Eval_invoke, ce.Eval_loc,
               ce.Eval_prj, ce.Eval_label, ce.Eval_goto, ce.Eval_goto_if,
               ce.Eval_goto_if_not, ce.Eval_indir, ce.Eval_addr, ce.Eval_block,
-              ce.Eval_tuple, ce.Eval_list, ce.Eval_switch):
+              ce.Eval_tuple, ce.Eval_list, ce.Eval_switch, ce.Eval_extern):
+    def extern(module, foreign_code):
+        module("const #{}#".format(json.dumps(foreign_code)))
+
     def __init__(self, filename: str, backend: PyBackEnd):
         self.code = [
             'runtime operator', 'filename {}'.format(json.dumps(filename))

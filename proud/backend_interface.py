@@ -1,7 +1,6 @@
 from proud.core_lang.modular_compiler import Evaluator, CompilerCtx
 from proud.core_lang.lowered_to_sexpr import SExprGen
-from proud.core_lang.scope import Sym
-from proud.core_lang.lowered_ir import Expr
+from proud.core_lang.scope import Sym, Scope
 from proud.parser.parser_wrap import parse
 from dataclasses import dataclass
 import typing
@@ -19,6 +18,9 @@ class BackEnd:
         raise NotImplementedError
 
     def init_compiler_ctx(self, filename, path) -> CompilerCtx:
+        raise NotImplementedError
+
+    def mk_top_scope(self) -> Scope:
         raise NotImplementedError
 
     def search_module(self, qualname: typing.List[str]) -> ModuleFinder:

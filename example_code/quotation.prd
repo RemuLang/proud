@@ -6,3 +6,7 @@ let f : int -> int = | x | -> x
 let code2 = `($f x)
 
 export run2 = code2 {x = 2}
+
+let print = extern "print"
+
+print run2

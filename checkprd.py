@@ -24,20 +24,7 @@ def check_code(filename):
     #
     # mod = parse(code, filename)
     # comp_ctx = CompilerCtx.top(filename, path)
-    # sym = comp_ctx.scope.enter("int")
-    # comp_ctx.tenv[sym] = te.App(types.type_type, types.int_t)
-    # sym = comp_ctx.scope.enter("string")
-    # comp_ctx.tenv[sym] = te.App(types.type_type, types.string_t)
-    # sym = comp_ctx.scope.enter("bool")
-    # comp_ctx.tenv[sym] = te.App(types.type_type, types.bool_t)
-    # sym = comp_ctx.scope.enter("float")
-    # comp_ctx.tenv[sym] = te.App(types.type_type, types.float_t)
-    # sym = comp_ctx.scope.enter("unit")
-    # comp_ctx.tenv[sym] = te.App(types.type_type, types.unit_t)
-    # sym = comp_ctx.scope.enter("value")
-    # comp_ctx.tenv[sym] = te.App(types.type_type, types.type_type)
-    # sym = comp_ctx.scope.enter("list")
-    # comp_ctx.tenv[sym] = te.App(types.type_type, types.list_t)
+
     #
     # modular = Modular(comp_ctx)
     # err = None

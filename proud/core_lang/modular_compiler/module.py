@@ -35,7 +35,7 @@ class Modular(Evaluator, ce.Eval_module, ce.Eval_loc, ce.Eval_define,
         filename, get_code = module_finder.filename, module_finder.get_code
         path = '.'.join(qualname)
         new_modular = Modular(
-            CompilerCtx(scope=Scope.top(),
+            CompilerCtx(scope=comp_ctx.backend.mk_top_scope(),
                         tc_state=comp_ctx.tc_state,
                         tenv=comp_ctx.tenv,
                         filename=filename,

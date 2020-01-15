@@ -1,5 +1,7 @@
 runtime operator
 filename "example_code\\quotation.prd"
+line 1
+line 3
 line 3
 defun
     filename "example_code\\quotation.prd"
@@ -27,6 +29,7 @@ defun
 }
 store code1_140729296069072
 line 5
+line 5
 defun
     filename "example_code\\quotation.prd"
     free []
@@ -38,6 +41,7 @@ defun
     return
 }
 deref! f_140729296069136
+line 6
 line 6
 defun
     filename "example_code\\quotation.prd"
@@ -59,6 +63,7 @@ defun
     return
 }
 deref! code2_140729296069232
+line 8
 deref code2_140729296069232
 line 8
 line 8
@@ -85,8 +90,11 @@ tuple 0
 tuple 2
 call 1
 store run2_140729296069328
+load code1_140729296069072
+deref code2_140729296069232
+deref f_140729296069136
 load run2_140729296069328
-tuple 1
+tuple 4
 tuple 0
 tuple 2
 store TestQuote_140729296069360
