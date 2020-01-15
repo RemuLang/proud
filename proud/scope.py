@@ -29,10 +29,16 @@ class Ref(t.Generic[T]):
 
 @derive.pre_visitor(lambda _, __, ___: False)
 @derive.post_visitor(lambda _, __, ___: False)
-class Sym(namedtuple("Sym", ["name", "uid", "is_cell"])):
+class Sym:
     name: str
     uid: object
     is_cell: Ref[bool]
+
+    def __init__(self, name: str, uid: object, is_cell: bool):
+        assert isinstance(is_cell, bool)
+        self.name = name
+        self.uid = uid
+        self.is_cell = Ref(is_cell)
 
     def __repr__(self):
         return self.name
@@ -109,13 +115,13 @@ def enter(scope: Scope, name: str) -> Sym:
         if scope.allow_reassign:
             return scope.boundvars[name]
         raise BindTwice(name)
-    s = scope.boundvars[name] = Sym(name, object(), Ref(False))
+    s = scope.boundvars[name] = Sym(name, object(), False)
     return s
 
 
 def shadow(scope: Scope, name: str) -> Sym:
     assert isinstance(name, (str, tuple)), name
-    s = scope.boundvars[name] = Sym(name, object(), Ref(False))
+    s = scope.boundvars[name] = Sym(name, object(), False)
     return s
 
 

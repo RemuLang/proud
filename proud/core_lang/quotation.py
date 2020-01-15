@@ -25,7 +25,7 @@ class Quote(Express, ce.Eval_unquote):
         try:
             return Express.eval_sym(self, x)
         except scope.Undef:
-            var = scope.Sym(x, object(), scope.Ref(False))
+            var = scope.Sym(x, object(), False)
             self.inner_scope.freevars[x] = var
             self.comp_ctx.tenv[var] = types.Var(
                 loc=self._loc, filename=self.comp_ctx.filename, name=x)

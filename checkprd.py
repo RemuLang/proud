@@ -2,6 +2,7 @@ from proud.parser_wrap import parse
 from proud.basic_impl import Modular
 from proud.core_lang import CompilerCtx
 from proud.lowered_to_sexpr import resolve_type, SExprGen
+from proud.codegen_lowered_sexpr import Codegen
 from proud import types
 from hybridts import type_encoding as te, exc
 # from hybridts.tc_make import RigidStructureKeeper
@@ -63,10 +64,15 @@ def check_code(filename):
         print(err)
 
     if lowered_ir:
-        resolve_type(lowered_ir, comp_ctx)
-        generator = SExprGen()
         from pprint import pprint
-        pprint(generator.eval(lowered_ir))
+        resolve_type(lowered_ir, comp_ctx)
+        sexpr_generator = SExprGen()
+        sexpr = sexpr_generator.eval(lowered_ir)
+        # pprint(sexpr)
+        sij_gen = Codegen(filename)
+        sij_gen.eval(sexpr)
+        with open(filename + '.sij', 'w') as f:
+            f.write(sij_gen.feed_code())
 
 
 if __name__ == '__main__':

@@ -326,7 +326,8 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
 
     def eval_sym(self, x: str) -> ir.Expr:
         my_type = self.comp_ctx.type_of_value(self.comp_ctx.scope.require(x))
-        return ir.Expr(type=my_type, expr=ir.Const(x))
+        var = self.comp_ctx.scope.require(x)
+        return ir.Expr(type=my_type, expr=var)
 
     def eval(self, x) -> ir.Expr:
         if sexpr.is_ast(x):

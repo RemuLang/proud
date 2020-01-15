@@ -2,7 +2,7 @@ module TestQuote
 
 let code1 = `(f x)
 
-let f : bigint -> bigint = coerce 0
+let f : bigint -> bigint = | x | -> x
 let code2 = `($f x)
 
-let run2 = code2 {x = 2}
+export run2 = code2 {x = 2}

@@ -1,0 +1,12 @@
+runtime operator
+filename "example_code\\simplest.prd"
+line 3
+const #1#
+store a_140729296068976
+load a_140729296068976
+tuple 1
+tuple 0
+tuple 2
+store A_140729296069008
+const #None#
+return

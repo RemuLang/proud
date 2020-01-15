@@ -15,10 +15,11 @@ class Numbering(dict):
 class Codegen(ce.Eval_set, ce.Eval_func, ce.Eval_invoke, ce.Eval_loc,
               ce.Eval_prj, ce.Eval_label, ce.Eval_goto, ce.Eval_goto_if,
               ce.Eval_goto_if_not, ce.Eval_indir, ce.Eval_addr, ce.Eval_block,
-              ce.Eval_tuple, ce.Eval_list, ce.Eval_switch, ce.Eval_typed,
-              ce.Eval_attr):
-    def __init__(self):
-        self.code = []
+              ce.Eval_tuple, ce.Eval_list, ce.Eval_switch):
+    def __init__(self, filename: str):
+        self.code = [
+            'runtime operator', 'filename {}'.format(json.dumps(filename))
+        ]
         self.layout = 0
         self.number = Numbering()
 
@@ -85,8 +86,6 @@ class Codegen(ce.Eval_set, ce.Eval_func, ce.Eval_invoke, ce.Eval_loc,
     def block(module, elts):
         for each in elts:
             module.eval(each)
-            module("pop")
-        module.code.pop()
 
     def tuple(module, elts):
         for each in elts:
@@ -107,7 +106,7 @@ class Codegen(ce.Eval_set, ce.Eval_func, ce.Eval_invoke, ce.Eval_loc,
 
         module("filename {}".format(json.dumps(filename)))
         module("free [{}]".format(' '.join(map(module.s2n, freevars))))
-        module("args [{}] {".format(module.s2n(arg)))
+        module("args [{}] {{".format(module.s2n(arg)))
         module.eval(expr)
         module("label pround.return")
         module("return")
@@ -122,11 +121,7 @@ class Codegen(ce.Eval_set, ce.Eval_func, ce.Eval_invoke, ce.Eval_loc,
         if default:
             module("| _ => {}".format(default))
 
-    def typed(module, type, expr):
-        """
-        specific for row records
-        """
-        raise NotImplementedError
-
-    def attr(module, base, attr_name: str):
-        raise NotImplementedError
+    def feed_code(self):
+        self.code.append('const #None#')
+        self.code.append('return')
+        return '\n'.join(self.code)

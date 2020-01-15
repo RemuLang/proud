@@ -1,5 +1,6 @@
 from proud.lowered_ir import *
 from proud import lowered_ir as ir
+from proud.types import type_type
 from proud.core_lang import CompilerCtx
 from proud.unique_scope import UniqueScope
 from proud.record_layout_rearrangement import polymorphize, monomorphize
@@ -37,7 +38,8 @@ def resolve_type(expr: Expr, comp_ctx: CompilerCtx):
     def resolve(expr: Expr):
         expr_type = tc_state.infer(expr.type)
         expr_type = pre_visit(replace_to_unit)((), expr_type)
-        if isinstance(expr.expr, Const):
+        if isinstance(expr.expr, Const) and isinstance(
+                expr.type, te.App) and isinstance(expr.type.f, type_type):
             # TODO: serialize type objects to marshal-able repr
             expr.expr = Const(id(tc_state.infer(expr.type)))
         elif isinstance(expr.expr, Polymorphization):
@@ -68,6 +70,7 @@ class SExprGen:
     def eval(self, top_expr: Expr) -> t.Union[tuple, scope.Sym]:
         expr = top_expr.expr
         if isinstance(expr, scope.Sym):
+            self.scope.require(expr)
             return expr
 
         if isinstance(expr, ir.Polymorphization):
@@ -185,9 +188,9 @@ class SExprGen:
                     elt = [(sexpr.set_k, sub, (sexpr.prj_k, tag, ith)),
                            rec_gen(each, depth + 1)]
                     elt2.append((sexpr.block_k, elt))
-                seq_hd.append(elt1)
-                seq_tl.append(elt2)
-                elts.extend([(sexpr.tuple_k, seq_hd), (sexpr.tuple_k, seq_tl)])
+                seq_hd.append((sexpr.tuple_k, elt1))
+                seq_tl.append((sexpr.tuple_k, elt2))
+                elts.extend([(sexpr.block_k, seq_hd), (sexpr.block_k, seq_tl)])
             return sexpr.tuple_k, elts
 
         block.append(rec_gen(layout_change))

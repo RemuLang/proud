@@ -1,0 +1,94 @@
+runtime operator
+filename "example_code\\quotation.prd"
+line 3
+defun
+    filename "example_code\\quotation.prd"
+    free []
+    args [.external_140729296068976] {
+    load .external_140729296068976
+    const #0#
+    prj
+    const #0#
+    prj
+    store f_140729296069008
+    load .external_140729296068976
+    const #0#
+    prj
+    const #1#
+    prj
+    store x_140729296069040
+    line 3
+    load f_140729296069008
+    line 3
+    load x_140729296069040
+    call 1
+    label pround.return
+    return
+}
+store code1_140729296069072
+line 5
+defun
+    filename "example_code\\quotation.prd"
+    free []
+    args [x_140729296069104] {
+    line 5
+    line 5
+    load x_140729296069104
+    label pround.return
+    return
+}
+deref! f_140729296069136
+line 6
+defun
+    filename "example_code\\quotation.prd"
+    free [f_140729296069136]
+    args [.external_140729296069168] {
+    load .external_140729296069168
+    const #0#
+    prj
+    const #0#
+    prj
+    store x_140729296069200
+    line 6
+    line 6
+    deref f_140729296069136
+    line 6
+    load x_140729296069200
+    call 1
+    label pround.return
+    return
+}
+deref! code2_140729296069232
+deref code2_140729296069232
+line 8
+line 8
+const #2#
+tuple 1
+tuple 0
+tuple 2
+store rearrange.0_140729296069264
+load rearrange.0_140729296069264
+const #0#
+prj
+store rearrange.1_140729296069296
+load rearrange.0_140729296069264
+const #0#
+prj
+store rearrange.1_140729296069296
+load rearrange.1_140729296069296
+tuple 1
+load rearrange.0_140729296069264
+const #1#
+prj
+store rearrange.1_140729296069296
+tuple 0
+tuple 2
+call 1
+store run2_140729296069328
+load run2_140729296069328
+tuple 1
+tuple 0
+tuple 2
+print
+const #None#
+return
