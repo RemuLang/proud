@@ -34,6 +34,9 @@ class Sym(namedtuple("Sym", ["name", "uid", "is_cell"])):
     uid: object
     is_cell: Ref[bool]
 
+    def __repr__(self):
+        return self.name
+
 
 class Scope:
     freevars: t.Dict[str, Sym]

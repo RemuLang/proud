@@ -1,4 +1,5 @@
 from proud.lowered_ir import *
+from proud import lowered_ir as ir
 from proud.core_lang import CompilerCtx
 from proud.unique_scope import UniqueScope
 from proud.record_layout_rearrangement import polymorphize, monomorphize
@@ -64,8 +65,36 @@ class SExprGen:
     def __init__(self):
         self.scope = UniqueScope.top()
 
-    def eval(self, expr: Expr) -> tuple:
-        pass
+    def eval(self, top_expr: Expr) -> t.Union[tuple, scope.Sym]:
+        expr = top_expr.expr
+        if isinstance(expr, scope.Sym):
+            return expr
+
+        if isinstance(expr, ir.Polymorphization):
+            return self.poly(expr.layout_type, expr.expr)
+        if isinstance(expr, ir.Momomorphization):
+            return self.mono(expr.layout_type, expr.expr)
+        if isinstance(expr, ir.Tuple):
+            return self.tuple(expr.elts)
+        if isinstance(expr, ir.WrapLoc):
+            return self.wrap_loc(expr.loc, expr.expr)
+        if isinstance(expr, ir.Const):
+            return self.const(expr.value)
+        if isinstance(expr, ir.Coerce):
+            return self.coerce(expr.target)
+        if isinstance(expr, ir.Set):
+            return self.set(expr.name, expr.expr)
+        if isinstance(expr, ir.Block):
+            return self.block(expr.elts)
+        if isinstance(expr, ir.Merge):
+            return self.merge(expr.left, expr.right)
+        if isinstance(expr, ir.Field):
+            return self.field(expr.base, expr.attr)
+        if isinstance(expr, ir.Invoke):
+            return self.invoke(expr.f, expr.arg)
+        if isinstance(expr, ir.Fun):
+            return self.fun(expr.name, expr.filename, expr.args, expr.expr)
+        raise NotImplementedError(type(expr))
 
     def set(self, name, expr):
         expr = self.eval(expr)
@@ -96,7 +125,7 @@ class SExprGen:
         return value
 
     def wrap_loc(self, loc, expr):
-        return sexpr.loc_k, loc, expr
+        return sexpr.loc_k, loc, self.eval(expr)
 
     def tuple(self, elts):
         return sexpr.tuple_k, tuple(map(self.eval, elts))

@@ -186,7 +186,10 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
             arg_type = arg_type.type
             assert not isinstance(arg_type, te.Implicit)
 
-        ret_t = types.Var(module._loc, module.comp_ctx.filename, name="ret")
+        morph_arg_t = arg_type
+        morph_ret_t = ret_t = types.Var(module._loc,
+                                        module.comp_ctx.filename,
+                                        name="ret")
 
         inst_arrow = te.Arrow(arg_type, ret_t)
         tc_state.unify(inst_arrow, f_type)
@@ -219,9 +222,10 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
                         return (), v
                     return (), t
 
+                morph_ret_t = ret_t
+                morph_arg_t = arg_type
                 ret_t = te.Forall(forall_scope, bounds,
                                   te.pre_visit(_subst)((), ret_t))
-
                 arg_type = te.Forall(forall_scope, bounds,
                                      te.pre_visit(_subst)((), arg_type))
 
@@ -240,11 +244,17 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
             arg.type = arg_type
 
         if to_poly:
-            arg = ir.Polymorphization(layout_type=to_poly, expr=arg)
+            arg.type = morph_arg_t
+            arg = ir.Expr(type=arg_type,
+                          expr=ir.Polymorphization(layout_type=to_poly,
+                                                   expr=arg))
 
         ret = ir.Expr(type=ret_t, expr=ir.Invoke(f, arg))
         if to_mono:
-            ret = ir.Momomorphization(layout_type=to_mono, expr=ret)
+            ret.type = morph_ret_t
+            ret = ir.Expr(type=ret_t,
+                          expr=ir.Momomorphization(layout_type=to_mono,
+                                                   expr=ret))
         return ret
 
     def lam(module, arg, type, ret):
@@ -316,7 +326,7 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
 
     def eval_sym(self, x: str) -> ir.Expr:
         my_type = self.comp_ctx.type_of_value(self.comp_ctx.scope.require(x))
-        return ir.Expr(type=my_type, expr=x)
+        return ir.Expr(type=my_type, expr=ir.Const(x))
 
     def eval(self, x) -> ir.Expr:
         if sexpr.is_ast(x):
