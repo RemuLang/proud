@@ -34,8 +34,8 @@ let _ = hello_world {name = "thautwarm", age = 18, sex = 0.5 }
 # quotation and splicing
 let var = "b"
 let code = `(print ($add x $var))
-let int_print : string -> unit = print
-let runcode = code {x = "n", print = int_print}
+let str_print : string -> unit = print
+let runcode = code {x = "n", print = str_print}
 ``` 
 
 To run this file:
