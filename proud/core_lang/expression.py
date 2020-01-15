@@ -53,11 +53,9 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
         rho_group = types.ForallScope(module._loc,
                                       filename=module.comp_ctx.filename)
         rho = te.Fresh('ρ', rho_group)
-        arg_type = te.Forall(
-            rho_group, (rho, ),
-            te.Record(
-                te.row_from_list([(attr, t) for _, attr, t in record_fields],
-                                 te.RowPoly(rho))))
+        arg_type = te.Record(
+            te.row_from_list([(attr, t) for _, attr, t in record_fields],
+                             te.RowPoly(rho)))
         module.comp_ctx.tc_state.unify(name_var, arg_type)
         arg_expr = ir.Expr(type=arg_type, expr=arg_sym)
         block = [
@@ -71,7 +69,8 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
         ret_expr = ir.Fun("<quote>", module.comp_ctx.filename, [arg_sym],
                           ir.Expr(expr=ir.Block(block), type=quote_expr.type))
         ret_type = te.Arrow(arg_type, quote_expr.type)
-        return ir.Expr(expr=ret_expr, type=ret_type)
+        return ir.Expr(expr=ret_expr,
+                       type=te.Forall(rho_group, (rho, ), ret_type))
 
     def attr(module, base, attr_name: str):
         base = module.eval(base)
