@@ -1,6 +1,7 @@
 from proud.core_lang import sexpr, lowered_ir as ir, composable_evaluator as ce, types
-from proud.core_lang.scope import Sym
+from proud.core_lang.scope import Sym, Scope
 from proud.core_lang.modular_compiler import *
+from proud.parser.parser_wrap import parse
 from hybridts import type_encoding as te
 import typing
 
@@ -18,10 +19,65 @@ def _sort_key(expr: ir.Expr):
     return expr.expr.name
 
 
-class Modular(Evaluator, ce.Eval_module, ce.Eval_loc, ce.Eval_define, ce.Eval_type):
+class Modular(Evaluator, ce.Eval_module, ce.Eval_loc, ce.Eval_define,
+              ce.Eval_type, ce.Eval_imp):
+    def imp(module, qualname: list):
+        comp_ctx = module.comp_ctx
+        name = qualname[-1]
+        sym = comp_ctx.scope.enter(name)
+        module_finder = comp_ctx.backend.search_module(qualname)
+        if module_finder.exist:
+            mod_sym = module_finder.exist
+            mod_type = comp_ctx.type_of_value(mod_sym)
+            mod_exp = ir.Expr(expr=mod_sym, type=mod_type)
+            return ignore(ir.Set(module_finder.exist, mod_exp))
+
+        filename, get_code = module_finder.filename, module_finder.get_code
+        path = '.'.join(qualname)
+        new_modular = Modular(
+            CompilerCtx(scope=Scope.top(),
+                        tc_state=comp_ctx.tc_state,
+                        tenv=comp_ctx.tenv,
+                        filename=filename,
+                        path=path,
+                        backend=comp_ctx.backend))
+        mod_ast = parse(get_code(), filename)
+        mod_exp = new_modular.eval(mod_ast)
+        comp_ctx.tenv[sym] = mod_exp.type
+        comp_ctx.backend.remember_module(path, sym)
+        return ignore(ir.Set(sym, mod_exp))
+
+    def type(module, typename, typedef):
+        comp_ctx = module.comp_ctx
+        path = module.comp_ctx.path
+
+        loc, typename = sexpr.unloc(typename)
+        qual_typename = '{}.{}'.format(path, typename)
+
+        sym_typename = comp_ctx.scope.enter(typename)
+        if typedef:
+            # type alias
+            nom_typename = comp_ctx.tc_state.infer(
+                Typing(comp_ctx).eval(typedef))
+        else:
+            nom_typename = types.Nom(qual_typename,
+                                     loc=loc,
+                                     filename=comp_ctx.filename)
+        comp_ctx.tenv[sym_typename] = te.App(types.type_type, nom_typename)
+
+        return ir.Expr(type=types.unit_t,
+                       expr=ir.WrapLoc(
+                           loc,
+                           ir.Expr(type=types.unit_t,
+                                   expr=ir.Set(
+                                       sym_typename,
+                                       ir.Expr(type=nom_typename,
+                                               expr=ir.Const(nom_typename))))))
+
     def loc(module, location, contents):
-        assert sexpr.is_ast(contents) and contents[0] is sexpr.module_k
-        return module.eval(contents)
+        _, contents = sexpr.unloc(contents)
+        exp = module.eval(contents)
+        return ir.Expr(type=exp.type, expr=ir.WrapLoc(loc=location, expr=exp))
 
     def eval(self, x) -> ir.Expr:
         assert sexpr.is_ast(x)
@@ -74,25 +130,24 @@ class Modular(Evaluator, ce.Eval_module, ce.Eval_loc, ce.Eval_define, ce.Eval_ty
 
     def module(module_eval, is_rec, name, stmts, loc=None):
 
-        prev_comp_ctx = module_eval.comp_ctx
-        tc_state = prev_comp_ctx.tc_state
-        tenv = prev_comp_ctx.tenv
+        comp_ctx = module_eval.comp_ctx
+        tc_state = comp_ctx.tc_state
+        tenv = comp_ctx.tenv
 
         mod_record_sym: typing.Optional[Sym] = None
         block_outside: typing.List[ir.Expr] = []
         block_inside: typing.List[ir.Expr] = []
         in_append = block_inside.append
-        in_extend = block_inside.extend
         out_append = block_outside.append
-        filename = prev_comp_ctx.filename
+        filename = comp_ctx.filename
         loc, name = sexpr.unloc(name)
-        path = '{}.{}'.format(prev_comp_ctx.path, name)
+        path = '{}.{}'.format(comp_ctx.path, name)
 
         module_type = None
         unit_t = types.unit_t
-
+        scope = comp_ctx.scope
         if is_rec:
-            mod_record_sym = prev_comp_ctx.scope.enter(name)
+            mod_record_sym = scope.enter(name)
             module_type = tenv[mod_record_sym] = types.Var(loc=loc,
                                                            filename=filename,
                                                            name=path)
@@ -100,71 +155,70 @@ class Modular(Evaluator, ce.Eval_module, ce.Eval_loc, ce.Eval_define, ce.Eval_ty
                 ir.Expr(type=unit_t,
                         expr=ir.Set(mod_record_sym,
                                     ir.Expr(type=unit_t, expr=ir.Const(())))))
-        with keep(module_eval):
 
-            scope_inside = prev_comp_ctx.scope.sub_scope(hold_bound=True)
-            comp_ctx = module_eval.comp_ctx = prev_comp_ctx.with_scope(
-                scope_inside)
+        # exprs = []
+        for stmt_located in stmts:
+            loc, stmt = sexpr.unloc(stmt_located)
+            if stmt[0] is sexpr.def_k:
+                if stmt[1]:
+                    # export
+                    _loc, n = sexpr.unloc(stmt[2])
+                    sym = scope.enter(n)
+                    tenv[sym] = types.Var(_loc, filename, n)
+            #     exprs.append(stmt)
+            #     continue
+            #
+            # assert stmt[0] == sexpr.type_k
+            # _, typename, typedef = stmt
+            # _loc, typename = sexpr.unloc(typename)
+            # qual_typename = '{}.{}'.format(path, typename)
+            #
+            # sym_typename = comp_ctx.scope.enter(typename)
+            # if typedef:
+            #     # type alias
+            #     nom_typename = tc_state.infer(
+            #         Typing(comp_ctx).eval(typedef))
+            # else:
+            #     nom_typename = types.Nom(qual_typename,
+            #                              loc=loc,
+            #                              filename=filename)
+            # tenv[sym_typename] = te.App(types.type_type, nom_typename)
+            #
+            # in_append(
+            #     ir.Expr(type=unit_t,
+            #             expr=ir.WrapLoc(
+            #                 loc,
+            #                 ir.Expr(
+            #                     type=unit_t,
+            #                     expr=ir.Set(
+            #                         sym_typename,
+            #                         ir.Expr(
+            #                             type=nom_typename,
+            #                             expr=ir.Const(nom_typename)))))))
 
-            exprs = []
-            for stmt_located in stmts:
-                loc, stmt = sexpr.unloc(stmt_located)
-                if stmt[0] is sexpr.def_k:
-                    if stmt[1]:
-                        # export
-                        _loc, n = sexpr.unloc(stmt[2])
-                        sym = scope_inside.enter(n)
-                        tenv[sym] = types.Var(_loc, filename, n)
-                    exprs.append(stmt)
-                    continue
-                assert stmt[0] == sexpr.type_k
-                _, typename, typedef = stmt
-                _loc, typename = sexpr.unloc(typename)
-                qual_typename = '{}.{}'.format(path, typename)
-
-                sym_typename = comp_ctx.scope.enter(typename)
-                if typedef:
-                    # type alias
-                    nom_typename = tc_state.infer(
-                        Typing(comp_ctx).eval(typedef))
-                else:
-                    nom_typename = types.Nom(qual_typename,
-                                             loc=loc,
-                                             filename=filename)
-                tenv[sym_typename] = te.App(types.type_type, nom_typename)
-
-                in_append(
-                    ir.Expr(type=unit_t,
-                            expr=ir.WrapLoc(
-                                loc,
-                                ir.Expr(
-                                    type=unit_t,
-                                    expr=ir.Set(
-                                        sym_typename,
-                                        ir.Expr(
-                                            type=nom_typename,
-                                            expr=ir.Const(nom_typename)))))))
-
-            syms = scope_inside.get_newest_bounds()
             # module is a record
-            in_extend(map(module_eval.eval, exprs))
 
-            mod_row = te.row_from_list([(s.name, tenv[s]) for s in syms],
-                                       te.empty_row)
-            if module_type:
-                tc_state.unify(module_type, te.Record(mod_row))
-            else:
-                module_type = te.Record(mod_row)
-            elts = [ir.Expr(type=tenv[sym], expr=sym) for sym in syms]
-            elts.sort(key=_sort_key)
-            in_append(
-                ir.Expr(type=module_type,
-                        expr=ir.Tuple(
-                            [anyway(ir.Tuple(elts)),
-                             anyway(ir.Tuple([]))])))
+        for stmt in stmts:
+            in_append(module_eval.eval(stmt))
+
+        syms = scope.get_newest_bounds()
+
+        mod_row = te.row_from_list([(s.name, tenv[s]) for s in syms],
+                                   te.empty_row)
+        if module_type:
+            tc_state.unify(module_type, te.Record(mod_row))
+        else:
+            module_type = te.Record(mod_row)
+        elts = [ir.Expr(type=tenv[sym], expr=sym) for sym in syms]
+        elts.sort(key=_sort_key)
+        in_append(
+            ir.Expr(type=module_type,
+                    expr=ir.Tuple(
+                        [anyway(ir.Tuple(elts)),
+                         anyway(ir.Tuple([]))])))
 
         if not is_rec:
-            mod_record_sym = prev_comp_ctx.scope.enter(name)
+            mod_record_sym = comp_ctx.scope.enter(name)
             tenv[mod_record_sym] = module_type
 
         out_append(

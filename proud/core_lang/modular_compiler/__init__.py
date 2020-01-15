@@ -73,6 +73,10 @@ class CompilerCtx(
         return CompilerCtx(scope, self.tc_state, self.tenv, self.filename,
                            self.path, self.backend)
 
+    def with_path(self, path: str):
+        filename, _ = self.backend.search_module(path.split('.'))
+        return CompilerCtx(self.scope, self.tc_state, self.tenv, filename, path, self.backend)
+
 
 @contextmanager
 def keep(self):
