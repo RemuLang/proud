@@ -1,6 +1,5 @@
 # Proud Programming Language
 
-Hope we can see a to-Python compiler in one day :)
  
 ## Feature
 
@@ -10,15 +9,15 @@ Hope we can see a to-Python compiler in one day :)
 - Modules as records!
 - Type holes(use `exist a. a` to create a scoped type variable for completing types for you)
 - Implicit inference(only first class polymorphisms need manually annotations)
-- Customizing operators' precedence and associativity(it's safe, because if you don't have to open a module globally), by [Remu-Operator](https://github.com/RemuLang/remu-operator).
+- Customizing operators' precedences and associativities(it's safe, because you don't have to open a module globally), by [Remu-Operator](https://github.com/RemuLang/remu-operator).
 
 ## Overview
 
-Currently, the strong type system is finished.
+Currently, a core language is implemented, with a code generation interface and implementation in Python.
 
-A core language is finished, with a code generation interface and implementation in Python.
+Pattern matching and implicit argumrnts are WIP, and I'm planning to bootstrap them with proud itself.
 
-`example_code/hello_world.prd`:
+Hello-world example: `example_code/hello_world.prd`:
 
 ```ocaml
 module HW
