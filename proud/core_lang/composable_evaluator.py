@@ -396,6 +396,45 @@ def mutual(cases, expr):
 dispatcher[mutual_k] = mutual
 
 
+class Eval_extern(Protocol):
+    @abc.abstractmethod
+    def extern(module, foreign_code):
+        ...
+
+
+def extern(foreign_code):
+    return lambda module: module.extern(foreign_code)
+
+
+dispatcher[extern_k] = extern
+
+
+class Eval_ite(Protocol):
+    @abc.abstractmethod
+    def ite(module, cond, true_clause, else_clause):
+        ...
+
+
+def ite(cond, true_clause, else_clause):
+    return lambda module: module.ite(cond, true_clause, else_clause)
+
+
+dispatcher[ite_k] = ite
+
+
+class Eval_imp(Protocol):
+    @abc.abstractmethod
+    def imp(module, qualname):
+        ...
+
+
+def imp(qualname):
+    return lambda module: module.imp(qualname)
+
+
+dispatcher[import_k] = imp
+
+
 class Eval_set(Protocol):
     @abc.abstractmethod
     def set(module, sym, expr):

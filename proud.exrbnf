@@ -6,6 +6,10 @@ ID : <UPPER> { loc_(*$0, $0) }
 
 module_def : 'module' ID list(top_level) { loc_((module_k, False, $1, $2), $0) } ;
 
+String   : <UPPER> { *$0  }
+         | <LOWER> { *$0  }
+         ;
+
 top_level: 'let' pat '=' expr             { loc_((def_k, False, $1, None, $3), $0) }
          | 'let' pat ':' type '=' expr    { loc_((def_k, False, $1, $3, $5), $0) }
          | 'export' pat '=' expr          { loc_((def_k, True, $1, None, $3), $0) }
@@ -15,6 +19,7 @@ top_level: 'let' pat '=' expr             { loc_((def_k, False, $1, None, $3), $
          | 'type' ID '=' list(constr)  { loc_((type_k, $1, (cons_k, tuple($3))), $0) }
          | 'type' ID '=' type          { loc_((type_k, $1, $3), $0) }
 
+         | 'import' separated_list('.', String) { loc_((import_k, $1), $0) }
          ;
 
 constr : '|' <UPPER>                                   { loc_((call_k, *$1, ()), $1) }
@@ -68,7 +73,8 @@ expr : 'let' pat '=' expr 'in' expr                  { loc_((let_k, False, $1, N
      | 'let' pat ':' type '=' expr 'in' expr         { loc_((let_k, False, $1, $3, $5, $7), $0) }
      | 'rec' pat '=' expr 'in' expr                  { loc_((let_k, True, $1, None, $3, $5), $0) }
      | 'rec' pat ':' type '=' expr 'in' expr         { loc_((let_k, True, $1, $3, $5, $7), $0) }
-
+     | 'if' expr 'then' expr 'else' expr             { loc_((ite_k, $1, $3, $5), $0) }
+     | 'fun' pat ml_lambda_typed  '->' expr          { loc_((lambda_k, $1, $2, $4), $0) }
      | '|' lambda                                    { loc_($1, $0) }
      | expr 'match' list(case)                       { loc_((match_k, $0, tuple($2)), $1) }
      | binary_operations                             { $0 }
@@ -83,6 +89,10 @@ lambda : pat lambda_typed lambda_body { (lambda_k, $0, $1, $2) };
 
 lambda_body : '->' expr { loc_($1, $0) }
             ;
+
+ml_lambda_typed : ':' type '->' { $1 }
+                | '->'          { None }
+                ;
 
 lambda_typed : ':' type '|' {  $1  }
              | '|'          { None }
@@ -109,6 +119,7 @@ atom      : '(' ')'             { loc_((tuple_k, ()), $0) }
           | atom '.' <LOWER>                         { loc_((attr_k, $0, *$2), $1) }
           | 'coerce' atom                            { loc_((coerce_k, $1), $0) }
           | 'val' type                               { loc_((type_k, None, $1), $0) }
+          | 'extern' <STRING>                        { loc_((extern_k, *$1), $0) }
 
           | '{' separated_list(',', expr_pair) row_expr  { loc_((record_k, tuple($1), $2), $0) }
           ;

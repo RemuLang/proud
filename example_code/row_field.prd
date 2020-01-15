@@ -1,5 +1,5 @@
 module MyMod
 
-let my : {a : bigint, p : bigint | exist tho. tho} = coerce 0
+let my : {a : int, p : int | exist tho. tho} = coerce 0
 let another_field : unit = my.another
 

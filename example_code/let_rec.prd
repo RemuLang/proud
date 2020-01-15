@@ -1,3 +1,3 @@
 module MyMod
-let add : bigint -> bigint -> bigint = coerce 0
+let add : int -> int -> int = coerce 0
 export f = rec func = |x| -> add (func 0) 2 in func

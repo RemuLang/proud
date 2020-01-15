@@ -16,7 +16,18 @@ except ImportError:
 class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
               ce.Eval_annotate, ce.Eval_binary, ce.Eval_list, ce.Eval_tuple,
               ce.Eval_record, ce.Eval_call, ce.Eval_attr, ce.Eval_quote,
-              ce.Eval_loc, ce.Eval_coerce, ce.Eval_literal, ce.Eval_type):
+              ce.Eval_loc, ce.Eval_coerce, ce.Eval_literal, ce.Eval_type,
+              ce.Eval_extern, ce.Eval_ite):
+    def extern(module, foreign_code):
+        return ir.Extern(foreign_code)
+
+    def ite(module, cond, true_clause, else_clause):
+        cond = module.eval(cond)
+        module.comp_ctx.tc_state.unify(cond.type, types.bool_t)
+        true_clause = module.eval(true_clause)
+        else_clause = module.eval(else_clause)
+        return ir.ITE(cond, true_clause, else_clause)
+
     def type(module, name, definition):
         assert name is None
         t = Typing(module.comp_ctx).eval(definition)
@@ -264,8 +275,7 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
         path = prev_comp_ctx.path
         with keep(module):
             arg_e = sub_scope.enter(name)
-            module.comp_ctx = CompilerCtx(sub_scope, tc_state, tenv, filename,
-                                          path)
+            module.comp_ctx = prev_comp_ctx.with_scope(sub_scope)
             if type:
                 arg_t = tc_state.infer(Typing(module.comp_ctx).eval(type))
             else:
@@ -286,9 +296,7 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
         tenv = prev_comp_ctx.tenv
         sub_scope = module.comp_ctx.scope.sub_scope(hold_bound=False)
         with keep(module):
-            module.comp_ctx = CompilerCtx(sub_scope, tc_state, tenv,
-                                          prev_comp_ctx.filename,
-                                          prev_comp_ctx.path)
+            module.comp_ctx = prev_comp_ctx.with_scope(sub_scope)
             if type:
                 my_type_for_unify = my_type = tc_state.infer(
                     Typing(module.comp_ctx).eval(type))

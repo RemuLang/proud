@@ -216,16 +216,37 @@ class Merge:
         return 'merge {} {}'.format(self.left, self.right)
 
 
+@dataclass
+class Extern:
+    foreign_code: str
+
+    def __repr__(self):
+        return 'foreign-code {}'.format(repr(self.foreign_code))
+
+
+@dataclass
+class ITE:
+    cond: 'Expr'
+    true_clause: 'Expr'
+    else_clause: 'Expr'
+
+
 BaseExpr = t.Union[Fun, Switch, Goto, GotoIf, GotoIfNot, Label, Invoke,
                    WrapLoc, Block, Set, Instance, Const, scope.Sym, Tuple,
-                   Coerce, Field, Merge, Polymorphization, Momomorphization]
+                   Extern, Coerce, Field, Merge, Polymorphization, ITE,
+                   Momomorphization]
 
-LeafBaseExpr = (Goto, Label, scope.Sym, Const)
+LeafBaseExpr = (Goto, Label, scope.Sym, Const, Extern)
 
 
 def visit_expr(action):
     def recurse_base(expr: BaseExpr) -> None:
         if isinstance(expr, LeafBaseExpr):
+            return
+        if isinstance(expr, ITE):
+            recurse(expr.cond)
+            recurse(expr.true_clause)
+            recurse(expr.else_clause)
             return
         if isinstance(expr, (Polymorphization, Momomorphization)):
             return recurse(expr.expr)

@@ -29,7 +29,7 @@ def generate(self: sexpr.ASTTag):
 
 code = [
     'import builtins', "import abc",
-    'from typing import Tuple', 'from proud.sexpr import *',
+    'from typing import Tuple', 'from proud.core_lang.sexpr import *',
     'from typing_extensions import Protocol', 'dispatcher = {}'
 ]
 for k, v in sexpr.__dict__.items():

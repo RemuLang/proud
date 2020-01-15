@@ -13,10 +13,9 @@ class Quote(Express, ce.Eval_unquote):
         filename = comp_ctx.filename
         path = comp_ctx.path
 
-        self.outer = CompilerCtx(comp_ctx.scope.sub_scope(), tc_state, tenv,
-                                 filename, path)
+        self.outer = comp_ctx.with_scope(comp_ctx.scope.sub_scope())
         inner_scope = self.inner_scope = scope.Scope(True, None)
-        comp_ctx = CompilerCtx(inner_scope, tc_state, tenv, filename, path)
+        comp_ctx = comp_ctx.with_scope(inner_scope)
         Express.__init__(self, comp_ctx)
 
     def eval_sym(self, x: str):

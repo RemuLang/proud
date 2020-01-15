@@ -45,6 +45,9 @@ cons_k = ASTTag("cons", ["branches"])
 attr_k = ASTTag("attr", ["base", ("attr_name", "builtins.str")])
 module_k = ASTTag("module", ['is_rec', "name", "stmts"])
 mutual_k = ASTTag("mutual", ['cases', 'expr'])
+extern_k = ASTTag("extern", ["foreign_code"])
+ite_k = ASTTag("ite", ["cond", "true_clause", "else_clause"])
+import_k = ASTTag("imp", ["qualname"])
 
 
 def unloc(e):

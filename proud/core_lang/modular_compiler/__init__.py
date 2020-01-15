@@ -6,12 +6,17 @@ from hybridts import type_encoding as te
 from contextlib import contextmanager
 import proud.core_lang.lowered_ir as ir
 import typing
+try:
+    from proud.backend_interface import BackEnd
+except ImportError:
+    pass
+
 __all__ = [
-    'ignore', 'unit', 'CompilerCtx', 'keep', 'type_map', 'Evaluator', 'anyway'
+    'type_map', 'CompilerCtx', 'keep', 'Evaluator', 'anyway', 'unit', 'ignore'
 ]
 
 type_map = {
-    int: types.bigint_t,
+    int: types.int_t,
     str: types.string_t,
     float: types.float_t,
     complex: types.complex_t,
@@ -19,21 +24,31 @@ type_map = {
 }
 
 
-def ignore(expr: ir.BaseExpr) -> ir.Expr:
-    return ir.Expr(type=types.unit_t, expr=expr)
+def ignore(ex: ir.BaseExpr):
+    return ir.Expr(type=types.unit_t, expr=ex)
 
 
 unit = ir.Expr(type=types.unit_t, expr=ir.Const(()))
 
 
 class CompilerCtx(
-        namedtuple("CompilerCtx",
-                   ["scope", "tc_state", "tenv", "filename", "path"])):
+        namedtuple(
+            "CompilerCtx",
+            ["scope", "tc_state", "tenv", "filename", "path", "backend"])):
+    """
+    You're supposed to init following types before compilation:
+    - a type named unit
+    - a type named int
+    - a type named str
+    - a type named bool
+    - a type named float
+    """
     scope: Scope
     tc_state: TCState
     tenv: typing.Dict[Sym, te.T]
     filename: str
-    path: str
+    path: str  # it's not that path, it's the qualified name of current module.
+    backend: 'BackEnd'
 
     def type_of_value(self, sym: Sym):
         return self.tenv[sym]
@@ -51,8 +66,12 @@ class CompilerCtx(
         return self.tenv[sym]
 
     @classmethod
-    def top(cls, filename, path):
-        return cls(Scope.top(), TCState({}), {}, filename, path)
+    def top(cls, filename, path, backend: 'BackEnd'):
+        return cls(Scope.top(), TCState({}), {}, filename, path, backend)
+
+    def with_scope(self, scope: Scope):
+        return CompilerCtx(scope, self.tc_state, self.tenv, self.filename,
+                           self.path, self.backend)
 
 
 @contextmanager
@@ -65,7 +84,7 @@ def keep(self):
 
 
 def anyway(x: ir.BaseExpr):
-    return ir.Expr(expr=x, type=types.unit_t)
+    return ir.Expr(expr=x, type=types.type_type)
 
 
 class Evaluator:

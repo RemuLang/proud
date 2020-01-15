@@ -78,7 +78,7 @@ def fresh(n: str):
 
 type_type = Nom("value")
 
-bigint_t = Nom("bigint")
+int_t = Nom("int")
 string_t = Nom("string")
 float_t = Nom("float")
 list_t = Nom("list")

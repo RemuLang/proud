@@ -23,8 +23,8 @@ def check_code(filename):
 
     mod = parse(code, filename)
     comp_ctx = CompilerCtx.top(filename, path)
-    sym = comp_ctx.scope.enter("bigint")
-    comp_ctx.tenv[sym] = te.App(types.type_type, types.bigint_t)
+    sym = comp_ctx.scope.enter("int")
+    comp_ctx.tenv[sym] = te.App(types.type_type, types.int_t)
     sym = comp_ctx.scope.enter("string")
     comp_ctx.tenv[sym] = te.App(types.type_type, types.string_t)
     sym = comp_ctx.scope.enter("bool")

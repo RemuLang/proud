@@ -12,6 +12,10 @@ W \s+
 %ignore W
 %ignore COMMENT
 
+%require ite_k
+%require extern_k
+%require import_k
+
 %require mutual_k
 %require lit_k
 %require coerce_k
