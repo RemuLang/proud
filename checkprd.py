@@ -21,7 +21,7 @@ def check_code(filename):
     print(Fore.BLUE, end='')
     print(code, Style.RESET_ALL)
 
-    mod = parse(code)
+    mod = parse(code, filename)
     comp_ctx = CompilerCtx.top(filename, path)
     sym = comp_ctx.scope.enter("bigint")
     comp_ctx.tenv[sym] = te.App(types.type_type, types.bigint_t)

@@ -21,8 +21,15 @@ def loc_(a, x: Token):
 ctx['loc_'] = loc_
 ctx['DQString'] = DQString
 
-
 _parse = mk_parser(**ctx)
+
+
+def _find_n(s: str, ch, n: int):
+    since = 0
+    for i in range(0, n - 1):
+        since = s.find(ch, since)
+
+    return s[since:s.find(ch, since)]
 
 
 def parse(text: str, filename: str = "unknown"):
@@ -39,12 +46,13 @@ def parse(text: str, filename: str = "unknown"):
         lineno = token.lineno
         maxline = max(lineno, maxline)
         colno = token.colno
-        msgs.append(f"Line {lineno}, column {colno}, {msg}")
+        msgs.append(f"Line {lineno + 1}, column {colno}, {msg}")
 
     e = SyntaxError()
     e.lineno = maxline + 1
     e.msg = '\n'.join(msgs)
     e.filename = filename
-    e.offset = token.offset
-    e.text = text
+    off = token.offset
+    e.offset = off
+    e.text = text[:text.find('\n', off)]
     raise e

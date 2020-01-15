@@ -1,0 +1,5 @@
+module A
+
+let x =
+
+export x = 1

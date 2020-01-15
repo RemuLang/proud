@@ -1,3 +1,0 @@
-module A
-
-export a = 1
