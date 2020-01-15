@@ -3,19 +3,22 @@ from proud import excs, sexpr
 from proud import lowered_ir as ir
 from proud import types
 from proud.core_lang import *
+from proud.scope import Scope
 from hybridts import type_encoding as te
 import typing
 
 try:
     # noinspection PyUnresolvedReferences
     from proud.core_lang.typing import Typing
+    from proud.core_lang.quotation import Quote
 except ImportError:
     pass
 
-class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
-              ce.Eval_binary, ce.Eval_list, ce.Eval_tuple, ce.Eval_record,
-              ce.Eval_call, ce.Eval_attr, ce.Eval_quote, ce.Eval_loc,
-              ce.Eval_coerce, ce.Eval_literal, ce.Eval_type):
+
+class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
+              ce.Eval_annotate, ce.Eval_binary, ce.Eval_list, ce.Eval_tuple,
+              ce.Eval_record, ce.Eval_call, ce.Eval_attr, ce.Eval_quote,
+              ce.Eval_loc, ce.Eval_coerce, ce.Eval_literal, ce.Eval_type):
     def type(module, name, definition):
         assert name is None
         t = Typing(module.comp_ctx).eval(definition)
@@ -34,7 +37,36 @@ class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
                                       name='coerce_var'))
 
     def quote(module, contents):
-        raise NotImplementedError
+        quotation = Quote(module.comp_ctx)
+        quote_expr = quotation.eval(contents)
+        scope: Scope = quotation.comp_ctx.scope
+        arg_sym = scope.enter(".external")
+        name_var = types.Var(module._loc,
+                             module.comp_ctx.filename,
+                             name=".external")
+        tenv = module.comp_ctx.tenv
+        tenv[arg_sym] = name_var
+        record_fields = []
+
+        for attr_name, each in scope.freevars.items():
+            record_fields.append((each, attr_name, tenv[each]))
+        arg_type = te.Record(
+            te.row_from_list([(attr, t) for _, attr, t in record_fields],
+                             te.empty_row))
+        module.comp_ctx.tc_state.unify(name_var, arg_type)
+        arg_expr = ir.Expr(type=arg_type, expr=arg_sym)
+        block = [
+            ignore(
+                ir.Set(
+                    each,
+                    ir.Expr(type=t, expr=ir.Field(base=arg_expr, attr=attr))))
+            for each, attr, t in record_fields
+        ]
+        block.append(quote_expr)
+        ret_expr = ir.Fun("<quote>", module.comp_ctx.filename, [arg_sym],
+                          ir.Expr(expr=ir.Block(block), type=quote_expr.type))
+        ret_type = te.Arrow(arg_type, quote_expr.type)
+        return ir.Expr(expr=ret_expr, type=ret_type)
 
     def attr(module, base, attr_name: str):
         base = module.eval(base)
@@ -209,7 +241,7 @@ class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
 
             freevars = list(sub_scope.freevars.values())
             name = "{} |{}|".format(path, name)
-            me = ir.Fun(name, filename, freevars, arg_e, ret)
+            me = ir.Fun(name, filename, arg_e, ret)
             return ir.Expr(type=my_type, expr=me)
 
     def let(module, is_rec, name, type, bound, body):
@@ -255,9 +287,9 @@ class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
                  ignore(ir.Set(me, bound)), body])
             return ir.Expr(type=my_type, expr=my_exp)
 
-    def __init__(self, comp_ctx: CompilerCtx):
-        self.comp_ctx = comp_ctx
-        self._loc = None
+    def eval_sym(self, x: str) -> ir.Expr:
+        my_type = self.comp_ctx.type_of_value(self.comp_ctx.scope.require(x))
+        return ir.Expr(type=my_type, expr=x)
 
     def eval(self, x) -> ir.Expr:
         if sexpr.is_ast(x):
@@ -265,8 +297,6 @@ class Express(ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
             return ce.dispatcher[hd](*args)(self)
 
         if isinstance(x, str):
-            my_type = self.comp_ctx.type_of_value(
-                self.comp_ctx.scope.require(x))
-            return ir.Expr(type=my_type, expr=x)
+            return self.eval_sym(x)
 
         raise TypeError(x)

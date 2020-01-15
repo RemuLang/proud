@@ -12,9 +12,9 @@ except ImportError:
     pass
 
 
-class Typing(ce.Eval_forall, ce.Eval_exist, ce.Eval_arrow, ce.Eval_imply,
-             ce.Eval_tuple, ce.Eval_record, ce.Eval_list, ce.Eval_loc,
-             ce.Eval_call, ce.Eval_type):
+class Typing(Evaluator, ce.Eval_forall, ce.Eval_exist, ce.Eval_arrow,
+             ce.Eval_imply, ce.Eval_tuple, ce.Eval_record, ce.Eval_list,
+             ce.Eval_loc, ce.Eval_call, ce.Eval_type):
     def type(module, name, definition):
         assert name is None
         x = Express(module.comp_ctx).eval(definition).type
@@ -118,7 +118,3 @@ class Typing(ce.Eval_forall, ce.Eval_exist, ce.Eval_arrow, ce.Eval_imply,
     def loc(module, location, contents):
         module._loc = location
         return module.eval(contents)
-
-    def __init__(self, comp_ctx: CompilerCtx):
-        self.comp_ctx = comp_ctx
-        self._loc = None

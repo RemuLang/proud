@@ -16,55 +16,13 @@ try:
 except ImportError:
     pass
 
-class CompilerCtx(
-        namedtuple("CompilerCtx",
-                   ["scope", "tc_state", "tenv", "filename", "path"])):
-    scope: Scope
-    tc_state: TCState
-    tenv: typing.Dict[Sym, te.T]
-    filename: str
-    path: str
-
-    def type_of_value(self, sym: Sym):
-        return self.tenv[sym]
-
-    def type_of_type(self, sym: Sym) -> te.T:
-        tcs = self.tc_state
-        t = tcs.infer(self.tenv[sym])
-        if isinstance(t, te.App) and t.f is types.type_type:
-            return t.arg
-        what_i_want = te.InternalVar(is_rigid=False)
-        tcs.unify(t, te.App(types.type_type, what_i_want))
-        return what_i_want
-
-    def value_of_type(self, sym: Sym):
-        return self.tenv[sym]
-
-    @classmethod
-    def top(cls, filename, path):
-        return cls(Scope.top(), TCState({}), {}, filename, path)
-
-
-@contextmanager
-def keep(self):
-    comp = self.comp_ctx
-    try:
-        yield
-    finally:
-        self.comp_ctx = comp
-
 
 def _sort_key(expr: ir.Expr):
     assert isinstance(expr.expr, Sym)
     return expr.expr.name
 
 
-class Modular(ce.Eval_module, ce.Eval_loc, ce.Eval_define):
-    def __init__(self, compiler_ctx: CompilerCtx):
-        """
-        NOTE!!: compiler_ctx should make subscope
-        """
-        self.comp_ctx = compiler_ctx
+class Modular(Evaluator, ce.Eval_module, ce.Eval_loc, ce.Eval_define):
 
     def loc(module, location, contents):
         assert sexpr.is_ast(contents) and contents[0] is sexpr.module_k
@@ -334,3 +292,4 @@ class Typing(ce.Eval_forall, ce.Eval_exist, ce.Eval_arrow, ce.Eval_imply,
     def __init__(self, comp_ctx: CompilerCtx):
         self.comp_ctx = comp_ctx
         self._loc = None
+

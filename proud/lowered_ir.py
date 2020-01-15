@@ -117,7 +117,6 @@ class Switch:
 class Fun:
     name: str
     filename: str
-    freevars: t.List[scope.Sym]
     args: t.List[scope.Sym]
     expr: 'Expr'
 

@@ -6,7 +6,7 @@ from hybridts import type_encoding as te
 from contextlib import contextmanager
 import proud.lowered_ir as ir
 import typing
-__all__ = ['ignore', 'unit', 'CompilerCtx', 'keep', 'type_map']
+__all__ = ['ignore', 'unit', 'CompilerCtx', 'keep', 'type_map', 'Evaluator']
 
 type_map = {
     int: types.bigint_t,
@@ -60,3 +60,12 @@ def keep(self):
         yield
     finally:
         self.comp_ctx = comp
+
+
+class Evaluator:
+    comp_ctx: CompilerCtx
+    _loc: typing.Optional[typing.Tuple[int, int]]
+
+    def __init__(self, comp_ctx: CompilerCtx):
+        self.comp_ctx = comp_ctx
+        self._loc = None

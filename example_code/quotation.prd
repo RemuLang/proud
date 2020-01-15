@@ -1,0 +1,6 @@
+module TestQuote
+
+let code1 = `(f x)
+
+let f : bigint -> bigint = coerce 0
+let code2 = `($f x)

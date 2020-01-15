@@ -51,8 +51,11 @@ class Var(te.Var):
         self.filename = filename
 
     def __repr__(self):
-        return '<{}{}>'.format(self.name,
-                               show_loc(filename=self.filename, loc=self.loc))
+        return '\'{}'.format(self.name)
+
+    # def __repr__(self):
+    #     return '<{}{}>'.format(self.name,
+    #                            show_loc(filename=self.filename, loc=self.loc))
 
 
 def _remove_bound_scope_visitor(_, t):
