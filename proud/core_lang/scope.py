@@ -1,28 +1,23 @@
 import typing as t
-
-T = t.TypeVar('T')
+from proud.helpers import Ref
 
 
 class Undef(Exception):
+
     def __init__(self, name):
         self.name = name
 
 
 class BindTwice(Exception):
+
     def __init__(self, name):
         self.name = name
 
 
 class NoAllocatorForBound(Exception):
+
     def __init__(self, name):
         self.name = name
-
-
-class Ref(t.Generic[T]):
-    contents: T
-
-    def __init__(self, v: T):
-        self.contents = v
 
 
 class Sym:

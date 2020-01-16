@@ -2,7 +2,7 @@ from hybridts import type_encoding as te
 from hybridts.tc_state import TCState
 
 
-def generalise_unify(tc_state: TCState, lhs: te.T, rhs: te.T):
+def mk_implicit(tc_state: TCState, lhs: te.T, rhs: te.T):
     """
     function application:
             T |- f : (Q) a -> b
@@ -38,6 +38,7 @@ def generalise_unify(tc_state: TCState, lhs: te.T, rhs: te.T):
            else, monotype, just return ret'
         8. GOOD NEWS: we don't have to care about the type of a', for both type infer and code gen
 
+
     let binding:
         for "let a = b [and ...] in c", it works like "f = fun a -> c, f b"
         T |- a: t1
@@ -51,5 +52,9 @@ def generalise_unify(tc_state: TCState, lhs: te.T, rhs: te.T):
         6. if C' is not empty:
               polymorphise t3' with C' (and t2', if we're to support type class)
            else just return t3'
+        -- hints for type annotations
+           for poly type like forall a. T, a does not enter the scope.
+           but for exist a. T, it's okay for a to enter the scope
+
     """
     raise NotImplementedError

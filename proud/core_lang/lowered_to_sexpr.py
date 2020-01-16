@@ -1,3 +1,4 @@
+from proud.helpers import MissingDict
 from proud.core_lang.lowered_ir import *
 from proud.core_lang.types import type_type
 from proud.core_lang.unique_scope import UniqueScope
@@ -13,14 +14,6 @@ type_obj = (te.App, te.Arrow, te.Var, te.Nom, te.Fresh, te.Tuple, te.Forall,
             te.Record, te.Implicit)
 
 
-class MissingDict(dict):
-    def __init__(self, f):
-        super().__init__()
-        self.gen_key = f
-
-    def __missing__(self, key):
-        value = self[key] = self.gen_key(key)
-        return value
 
 
 def _sort_key(x):

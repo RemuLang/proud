@@ -78,6 +78,14 @@ class CompilerLocalContext:
     def top(cls, filename: str, path: str, location=(0, 0)):
         return cls(Scope.top(), filename, path, location)
 
+    @contextmanager
+    def resume_scope(self):
+        prev_scope = self.scope
+        try:
+            yield
+        finally:
+            self.scope = prev_scope
+
 
 ## Interpreter base class
 class Interpreter:

@@ -1,6 +1,8 @@
+from proud.helpers import MissingDict, Ref
 from proud.core_lang import sexpr, lowered_ir as ir, composable_evaluator as ce, types
 from proud.core_lang.scope import Sym, Scope
 from proud.core_lang.modular_compiler import *
+from proud.core_lang.check_valid import assure_not_generalised_record_value
 from proud.parser.parser_wrap import parse
 from hybridts import type_encoding as te
 import typing
@@ -14,7 +16,7 @@ except ImportError:
     pass
 
 
-def _sort_key(expr: ir.Expr):
+def _sort_sym(expr: ir.Expr):
     assert isinstance(expr.expr, Sym)
     return expr.expr.name
 
@@ -71,7 +73,7 @@ def make(cgc: CompilerGlobalContext):
             filename, get_code = module_finder.filename, module_finder.get_code
             path = '.'.join(qualname)
             new_modular = Modular(
-                CompilerLocalContext(scope=clc.scope,
+                CompilerLocalContext(scope=backend.mk_top_scope(),
                                      filename=filename,
                                      path=path))
 
@@ -112,51 +114,152 @@ def make(cgc: CompilerGlobalContext):
             scope = clc.scope
             filename = clc.filename
             path = '{}.{}'.format(clc.path, name)
+
+            # only for recursive modules.
             sym_mod: typing.Optional[Sym] = None
 
-            # generated ir outside module
+            # generated ir outside module;
+            # only for recursive modules.
             outer_stmts: typing.List[ir.Expr] = []
             # generated ir for module itself
             inner_stmts: typing.List[ir.Expr] = []
 
+            # type of module. will be a non-extensible record.
             type_mod = None
-            unit_t = types.unit_t
+
+            # recursive module.
             if is_rec:
-                # recursive module, which can visit itself inside the module by the name
                 sym_mod = scope.enter(name)
                 type_mod = tenv[sym_mod] = types.Var(loc=loc, filename=filename, name=path)
                 outer_stmts.append(ignore(ir.Set(sym_mod, ignore(ir.Const(())))))
 
-            for stmt_located in stmts:
-                loc, stmt = sexpr.unloc(stmt_located)
-                if stmt[0] is sexpr.def_k:
-                    if stmt[1]:
-                        # export
-                        _loc, n = sexpr.unloc(stmt[2])
-                        sym = scope.enter(n)
-                        tenv[sym] = types.Var(_loc, filename, n)
-
+            # for preprocessing
+            # 1. recursive functions and
+            # 2. type definitions.
+            filter_stmts = []
             for stmt in stmts:
-                in_append(module_eval.eval(stmt))
+                _, stmt_unloc = sexpr.unloc(stmt)
+
+                # type definition
+                if stmt_unloc[0] is sexpr.type_k:
+                    inner_stmts.append(module_eval.eval(stmt))
+                    continue
+
+                filter_stmts.append(stmt)
+                if stmt_unloc[0] is sexpr.def_k:
+                    if stmt_unloc[1]:
+                        # Recursive definition. It's guaranteed to
+                        # be a function in syntax level.
+                        loc, n = sexpr.unloc(stmt_unloc[2])
+                        sym = scope.enter(n)
+                        tenv[sym] = types.Var(loc, filename, n)
+
+            for stmt in filter_stmts:
+                inner_stmts.append(module_eval.eval(stmt))
 
             syms = scope.get_newest_bounds()
 
-            mod_row = te.row_from_list([(s.name, tenv[s]) for s in syms], te.empty_row)
+            row_mod = te.row_from_list([(s.name, tenv[s]) for s in syms], te.empty_row)
             if type_mod:
-                tc_state.unify(type_mod, te.Record(mod_row))
+                # recursive module
+                tc_state.unify(type_mod, te.Record(row_mod))
             else:
-                type_mod = te.Record(mod_row)
-            elts = [ir.Expr(type=tenv[sym], expr=sym) for sym in syms]
-            elts.sort(key=_sort_key)
-            in_append(ir.Expr(type=type_mod, expr=ir.Tuple([anyway(ir.Tuple(elts)), anyway(ir.Tuple([]))])))
+                type_mod = te.Record(row_mod)
+
+            elts_mod = [ir.Expr(type=tenv[sym], expr=sym) for sym in syms]
+            elts_mod.sort(key=_sort_sym)
+
+            val_mod = ir.Expr(type=type_mod, expr=ir.Tuple([anyway(ir.Tuple(elts_mod)), anyway(ir.Tuple([]))]))
+            inner_stmts.append(val_mod)
+
+            exp_mod = ir.Expr(type=type_mod, expr=ir.Block(inner_stmts))
 
             if not is_rec:
-                sym_mod = comp_ctx.scope.enter(name)
-                tenv[sym_mod] = type_mod
+                return exp_mod
 
-            out_append(ir.Expr(type=unit_t,
-                               expr=ir.Set(sym_mod, ir.Expr(type=type_mod, expr=ir.Block(inner_stmts)))))
+            outer_stmts.append(ignore(ir.Set(sym_mod, exp_mod)))
+            outer_stmts.append(ir.Expr(type=type_mod, expr=sym_mod))
             return ir.Expr(type=type_mod, expr=ir.Block(outer_stmts))
+
+        def define(self, is_rec, name, annotated, bound):
+            module = Express(self.clc)
+            loc, name = sexpr.unloc(name)
+            clc = self.clc
+            scope = clc.scope
+
+            if is_rec:
+                sym_def = scope.require(name)
+                name_var = tenv[sym_def]
+            else:
+                sym_def = scope.shadow(name)  # may shadow
+                name_var = types.Var(loc, clc.filename, name)
+                tenv[sym_def] = name_var
+
+            sub_scope = scope.sub_scope()
+            with clc.resume_scope():
+                clc.scope = sub_scope
+                if annotated:
+                    t1 = Typing(clc).eval(annotated)
+                    tc_state.unify(name_var, t1)
+                else:
+                    t1 = name_var
+                    # my_type = my_type_for_unify = name_var
+
+                bound: ir.Expr = module.eval(bound)
+                t2 = bound.type
+
+                t2 = tc_state.infer(t2)
+                t1 = tc_state.infer(t1)
+
+                assure_not_generalised_record_value(t1)
+
+                TV1, t1_inst = tc_state.inst_without_structure_preserved(t1, rigid=True)
+                TV2, t2_inst = tc_state.inst_without_structure_preserved(t2, rigid=False)
+
+                TV = list(TV1.values()) + list(TV2.values())
+
+                implicit_args = []
+                while isinstance(t2_inst, te.Implicit):
+                    implicit_args.append(t2_inst.witness)
+                    t2_inst = t2_inst.type
+
+                tc_state.unify(t1_inst, t2_inst)
+
+                #  Try to generalise value
+                forall = types.ForallScope(loc, clc.filename)
+
+                def default(_, ref=Ref(0)):
+                    ith = ref.contents
+                    ref.contents += 1
+                    return te.Fresh('a{}'.format(ith), forall)
+
+                generalised_vars = MissingDict(default)
+                for tv in TV:
+                    tv = tc_state.infer(tv)
+                    if isinstance(tv, te.Var):
+                        _ = generalised_vars[tv]
+
+                if generalised_vars:
+                    bounds = tuple(generalised_vars.values())
+                    for var, forall_bound in generalised_vars:
+                        tc_state.unify(var, forall_bound)
+
+                    t2_inst = te.Forall(forall, bounds, tc_state.infer(t2_inst))
+
+                bound.type = t2_inst
+
+                # type class
+                if implicit_args:
+                    implicit_args.reverse()
+                    for implicit_arg in implicit_args:
+                        bound.expr = ir.Instance(
+                            implicit_arg,
+                            scope,
+                            ir.Expr(type=t2_inst, expr=bound.expr)
+                        )
+
+                exp_def = ir.Set(sym_def, bound)
+                return ignore(exp_def)
 
     return Modular, [link_express, link_typing]
 
@@ -316,7 +419,7 @@ class Modular(Evaluator, ce.Eval_module, ce.Eval_loc, ce.Eval_define, ce.Eval_ty
         else:
             module_type = te.Record(mod_row)
         elts = [ir.Expr(type=tenv[sym], expr=sym) for sym in syms]
-        elts.sort(key=_sort_key)
+        elts.sort(key=_sort_sym)
         in_append(
             ir.Expr(type=module_type,
                     expr=ir.Tuple([anyway(ir.Tuple(elts)),

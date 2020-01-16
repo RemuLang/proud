@@ -1,5 +1,5 @@
 from proud.core_lang import sexpr, lowered_ir as ir, composable_evaluator as ce, types
-from proud.core_lang.scope import Scope
+from proud.core_lang.scope import Scope, Sym
 from hybridts import type_encoding as te
 from proud.core_lang.modular_compiler import *
 import typing
@@ -11,6 +11,56 @@ try:
     from proud.core_lang.modular_compiler.quotation import Quote
 except ImportError:
     pass
+
+
+def make(cgc: CompilerGlobalContext):
+    tc_state = cgc.tc_state
+    backend = cgc.backend
+    tenv = cgc.tenv
+
+    Typing = typing.cast(typing.Callable[[CompilerLocalContext], Interpreter], None)
+    Quote = typing.cast(typing.Callable[[CompilerLocalContext], Interpreter], None)
+
+    def link_typing(**evaluators):
+        nonlocal Typing
+        Typing = evaluators['Typing']
+
+    def link_quote(**evaluators):
+        nonlocal Quote
+        Quote = evaluators['Quote']
+
+    def type_of_value(sym: Sym):
+        return tenv[sym]
+
+    def type_of_type(sym: Sym) -> te.T:
+        t = tc_state.infer(tenv[sym])
+        if isinstance(t, te.App) and t.f is types.type_type:
+            return t.arg
+        what_i_want = te.InternalVar(is_rigid=False)
+        tc_state.unify(t, te.App(types.type_type, what_i_want))
+        return what_i_want
+
+    def value_of_type(sym: Sym):
+        return tenv[sym]
+
+    class Express(Interpreter, ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
+                  ce.Eval_binary, ce.Eval_list, ce.Eval_tuple, ce.Eval_record,
+                  ce.Eval_call, ce.Eval_attr, ce.Eval_quote, ce.Eval_loc, ce.Eval_coerce,
+                  ce.Eval_literal, ce.Eval_type, ce.Eval_extern, ce.Eval_ite):
+
+        def extern(module, foreign_code):
+            clc = module.clc
+            return ir.Expr(expr=ir.Extern(foreign_code),
+                           type=types.Var(clc.location, clc.filename, name="extern\'"))
+
+        def ite(module, cond, true_clause, else_clause):
+            cond = module.eval(cond)
+            tc_state = module.comp_ctx.tc_state
+            tc_state.unify(cond.type, types.bool_t)
+            true_clause = module.eval(true_clause)
+            else_clause = module.eval(else_clause)
+            tc_state.unify(true_clause.type, else_clause.type)
+            return ir.Expr(expr=ir.ITE(cond, true_clause, else_clause), type=true_clause.type)
 
 
 class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
