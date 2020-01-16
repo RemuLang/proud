@@ -71,12 +71,12 @@ def make(cgc: CompilerGlobalContext):
             filename, get_code = module_finder.filename, module_finder.get_code
             path = '.'.join(qualname)
             new_modular = Modular(
-                CompilerLocalContext(scope=backend.mk_top_scope(),
+                CompilerLocalContext(scope=clc.scope,
                                      filename=filename,
                                      path=path))
 
-            mod_ast = parse(get_code(), filename)
-            exp_mod = new_modular.eval(mod_ast)
+            ast_mod = parse(get_code(), filename)
+            exp_mod = new_modular.eval(ast_mod)
             tenv[sym] = exp_mod.type
             backend.remember_module(path, sym)
             return ignore(ir.Set(sym, exp_mod))
@@ -104,6 +104,59 @@ def make(cgc: CompilerGlobalContext):
             module.clc.location = location
             exp = module.eval(contents)
             return wrap_loc(location, exp)
+
+        def module(module_eval, is_rec, name, stmts, loc=None):
+            loc, name = sexpr.unloc(name)
+
+            clc = module_eval.clc
+            scope = clc.scope
+            filename = clc.filename
+            path = '{}.{}'.format(clc.path, name)
+            sym_mod: typing.Optional[Sym] = None
+
+            # generated ir outside module
+            outer_stmts: typing.List[ir.Expr] = []
+            # generated ir for module itself
+            inner_stmts: typing.List[ir.Expr] = []
+
+            type_mod = None
+            unit_t = types.unit_t
+            if is_rec:
+                # recursive module, which can visit itself inside the module by the name
+                sym_mod = scope.enter(name)
+                type_mod = tenv[sym_mod] = types.Var(loc=loc, filename=filename, name=path)
+                outer_stmts.append(ignore(ir.Set(sym_mod, ignore(ir.Const(())))))
+
+            for stmt_located in stmts:
+                loc, stmt = sexpr.unloc(stmt_located)
+                if stmt[0] is sexpr.def_k:
+                    if stmt[1]:
+                        # export
+                        _loc, n = sexpr.unloc(stmt[2])
+                        sym = scope.enter(n)
+                        tenv[sym] = types.Var(_loc, filename, n)
+
+            for stmt in stmts:
+                in_append(module_eval.eval(stmt))
+
+            syms = scope.get_newest_bounds()
+
+            mod_row = te.row_from_list([(s.name, tenv[s]) for s in syms], te.empty_row)
+            if type_mod:
+                tc_state.unify(type_mod, te.Record(mod_row))
+            else:
+                type_mod = te.Record(mod_row)
+            elts = [ir.Expr(type=tenv[sym], expr=sym) for sym in syms]
+            elts.sort(key=_sort_key)
+            in_append(ir.Expr(type=type_mod, expr=ir.Tuple([anyway(ir.Tuple(elts)), anyway(ir.Tuple([]))])))
+
+            if not is_rec:
+                sym_mod = comp_ctx.scope.enter(name)
+                tenv[sym_mod] = type_mod
+
+            out_append(ir.Expr(type=unit_t,
+                               expr=ir.Set(sym_mod, ir.Expr(type=type_mod, expr=ir.Block(inner_stmts)))))
+            return ir.Expr(type=type_mod, expr=ir.Block(outer_stmts))
 
     return Modular, [link_express, link_typing]
 
