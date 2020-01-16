@@ -229,6 +229,10 @@ class ITE:
     cond: 'Expr'
     true_clause: 'Expr'
     else_clause: 'Expr'
+    token = None
+
+    def __post_init__(self):
+        self.token = object()
 
 
 BaseExpr = t.Union[Fun, Switch, Goto, GotoIf, GotoIfNot, Label, Invoke,

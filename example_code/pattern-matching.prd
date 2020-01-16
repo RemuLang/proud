@@ -1,0 +1,70 @@
+module pm
+
+# let pattern1 =
+#    recog f1 | data | ->
+#        print data.x
+
+# let pattern2 =
+#    recog f2 | data | ->
+#        print data.
+
+
+type option
+let pattern : forall v r. value v -> value r -> value (v -> option r) =
+    fun _1 -> fun _2 -> val exist _. _
+
+# let pattern :  forall v p r. value v -> value p -> value r -> value ((p -> r) -> v -> option r) =
+#    fun _1 -> fun _2 -> fun _3 -> val exist _. _
+
+let eq : forall a. a -> a -> bool = extern "lambda x: lambda y: x == y"
+let fst : forall a b. (a, b) -> a = extern "lambda x: x[0]"
+let snd : forall a b. (a, b) -> a = extern "lambda x: x[1]"
+let print: forall a. a -> unit = extern "print"
+
+let some : forall a. a -> option a = coerce 0
+let none : forall a. unit -> option a = coerce 0
+let is_some : forall a. option a -> bool = coerce 0
+let unbox_some : forall a. option a -> a = coerce 0
+
+let literal : forall r. int -> (int -> r) -> val (pattern int r) =
+    fun pat -> fun f -> fun value ->
+        if eq value pat then
+            some (f value)
+        else
+            none ()
+
+let branch : forall v p r. value v -> value p -> value r -> value {decons: v -> p option, do: p -> r} =
+    fun _1 -> fun _2 -> fun _3 -> val exist _. _
+
+let alt : forall v r t1 t2.
+    (val(branch v t1 r)) ->
+    (val(branch v t2 r)) ->
+    val (pattern v r) =
+    | p1 | -> | p2 | -> fun v ->
+    let try = p1.decons v in
+    if is_some try then
+        some (p1.do (unbox_some try))
+    else
+    let try = p2.decons v in
+    if is_some try then
+        some (p2.do (unbox_some try))
+    else
+        none ()
+
+# let check1 = {decons = fun x -> if eq x 1 then some 233 else none (), do = let p = print in p}
+# let check2 = {decons = fun x -> if True then some 42 else none (), do = let p = print in p}
+
+
+# let alt' = alt check1 check2
+
+
+
+
+
+
+
+
+
+# let recog : forall v p r. (v -> option p) -> (p -> r) -> v -> option r = coerce 0
+# let literal : forall ret. int -> (int -> ret) -> int -> option ret = coerce 0
+# let xy : {x :

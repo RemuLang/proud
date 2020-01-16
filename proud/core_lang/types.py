@@ -16,6 +16,7 @@ def show_loc(filename, loc):
 
 
 class Nom(te.Nom):
+
     def __init__(self, name, loc=None, filename=compiler_builtin_file):
         self.name = name
         self.loc = loc
@@ -26,11 +27,11 @@ class Nom(te.Nom):
 
     def __repr__(self):
 
-        return '<{}{}>'.format(self.name,
-                               show_loc(loc=self.loc, filename=self.filename))
+        return '<{}{}>'.format(self.name, show_loc(loc=self.loc, filename=self.filename))
 
 
 class ForallScope(te.ForallGroup):
+
     def __init__(self, loc=None, filename=None):
         self.loc = loc
         self.filename = filename
@@ -39,11 +40,11 @@ class ForallScope(te.ForallGroup):
         if self.filename is None:
             return '<forall>'
 
-        return '<forall{}>'.format(
-            show_loc(loc=self.loc, filename=self.filename))
+        return '<forall{}>'.format(show_loc(loc=self.loc, filename=self.filename))
 
 
 class Var(te.Var):
+
     def __init__(self, loc, filename, name=None, is_rigid=False):
         self.is_rigid = is_rigid
         self.name = name or hex(id(self))
@@ -77,7 +78,7 @@ def fresh(n: str):
 
 
 type_type = Nom("value")
-
+anyway_type = Nom("anyway(shouldn't be awared by user!)")
 int_t = Nom("int")
 string_t = Nom("string")
 float_t = Nom("float")

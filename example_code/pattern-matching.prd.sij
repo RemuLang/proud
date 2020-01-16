@@ -1,0 +1,269 @@
+runtime operator
+filename "example_code\\pattern-matching.prd"
+line 1
+line 12
+line 12
+const #<Main.option from example_code\pattern-matching.prd, line 12, col 6>#
+deref! option_140729703178608
+line 13
+line 14
+defun
+    filename "example_code\\pattern-matching.prd"
+    free []
+    args [_1_140729703178640] {
+    line 14
+    defun
+        filename "example_code\\pattern-matching.prd"
+        free []
+        args [_2_140729703178672] {
+        line 14
+        const #'0x2cd1dab4988#
+        label pround.return
+        return
+    }
+    label pround.return
+    return
+}
+deref! pattern_140729703178704
+line 19
+line 19
+const #lambda x: lambda y: x == y#
+deref! eq_140729703178736
+line 20
+line 20
+const #lambda x: x[0]#
+store fst_140729703178768
+line 21
+line 21
+const #lambda x: x[1]#
+store snd_140729703178800
+line 22
+line 22
+const #print#
+deref! print_140729703178832
+line 24
+line 24
+line 24
+const #0#
+deref! some_140729703178864
+line 25
+line 25
+line 25
+const #0#
+deref! none_140729703178896
+line 26
+line 26
+line 26
+const #0#
+store is_some_140729703178928
+line 27
+line 27
+line 27
+const #0#
+store unbox_some_140729703178960
+line 29
+line 30
+defun
+    filename "example_code\\pattern-matching.prd"
+    free [eq_140729703178736 none_140729703178896 some_140729703178864]
+    args [pat_140729703178992] {
+    line 30
+    defun
+        filename "example_code\\pattern-matching.prd"
+        free [eq_140729703178736 none_140729703178896 pat_140729703178992 some_140729703178864]
+        args [f_140729703179024] {
+        line 30
+        defun
+            filename "example_code\\pattern-matching.prd"
+            free [none_140729703178896 eq_140729703178736 f_140729703179024 pat_140729703178992 some_140729703178864]
+            args [value_140729703179056] {
+            line 31
+            deref eq_140729703178736
+            line 31
+            load value_140729703179056
+            call 1
+            line 31
+            deref pat_140729703178992
+            call 1
+            goto-if if3079989444928.true
+            deref none_140729703178896
+            line 34
+            const #()#
+            call 1
+            goto if3079989444928.end
+            label if3079989444928.true
+            deref some_140729703178864
+            line 32
+            deref f_140729703179024
+            line 32
+            load value_140729703179056
+            call 1
+            call 1
+            label if3079989444928.end
+            label pround.return
+            return
+        }
+        label pround.return
+        return
+    }
+    label pround.return
+    return
+}
+store literal_140729703179088
+line 36
+line 37
+defun
+    filename "example_code\\pattern-matching.prd"
+    free []
+    args [_1_140729703179120] {
+    line 37
+    defun
+        filename "example_code\\pattern-matching.prd"
+        free []
+        args [_2_140729703179152] {
+        line 37
+        defun
+            filename "example_code\\pattern-matching.prd"
+            free []
+            args [_3_140729703179184] {
+            line 37
+            const #'0x2cd1dad2fc8#
+            label pround.return
+            return
+        }
+        label pround.return
+        return
+    }
+    label pround.return
+    return
+}
+deref! branch_140729703179216
+line 39
+line 43
+defun
+    filename "example_code\\pattern-matching.prd"
+    free []
+    args [p1_140729703179248] {
+    line 43
+    line 43
+    defun
+        filename "example_code\\pattern-matching.prd"
+        free []
+        args [p2_140729703179280] {
+        line 43
+        line 43
+        defun
+            filename "example_code\\pattern-matching.prd"
+            free []
+            args [v_140729703179312] {
+            line 44
+            line 44
+            const #0#
+            label pround.return
+            return
+        }
+        label pround.return
+        return
+    }
+    label pround.return
+    return
+}
+store alt_140729703179344
+line 46
+line 46
+line 46
+defun
+    filename "example_code\\pattern-matching.prd"
+    free [eq_140729703178736 none_140729703178896 some_140729703178864]
+    args [x_140729703179376] {
+    line 46
+    deref eq_140729703178736
+    line 46
+    load x_140729703179376
+    call 1
+    line 46
+    const #1#
+    call 1
+    goto-if if3079989445232.true
+    deref none_140729703178896
+    line 46
+    const #()#
+    call 1
+    goto if3079989445232.end
+    label if3079989445232.true
+    deref some_140729703178864
+    line 46
+    const #233#
+    call 1
+    label if3079989445232.end
+    label pround.return
+    return
+}
+line 46
+line 46
+line 46
+deref print_140729703178832
+store p_140729703179408
+line 46
+load p_140729703179408
+tuple 2
+tuple 0
+tuple 2
+store check1_140729703179440
+line 47
+line 47
+line 47
+defun
+    filename "example_code\\pattern-matching.prd"
+    free [some_140729703178864 none_140729703178896]
+    args [x_140729703179472] {
+    line 47
+    line 47
+    const #True#
+    goto-if if3079989445328.true
+    deref none_140729703178896
+    line 47
+    const #()#
+    call 1
+    goto if3079989445328.end
+    label if3079989445328.true
+    deref some_140729703178864
+    line 47
+    const #42#
+    call 1
+    label if3079989445328.end
+    label pround.return
+    return
+}
+line 47
+line 47
+line 47
+deref print_140729703178832
+store p_140729703179504
+line 47
+load p_140729703179504
+tuple 2
+tuple 0
+tuple 2
+store check2_140729703179536
+load alt_140729703179344
+deref branch_140729703179216
+load check1_140729703179440
+load check2_140729703179536
+deref eq_140729703178736
+load fst_140729703178768
+load is_some_140729703178928
+load literal_140729703179088
+deref none_140729703178896
+deref option_140729703178608
+deref pattern_140729703178704
+deref print_140729703178832
+load snd_140729703178800
+deref some_140729703178864
+load unbox_some_140729703178960
+tuple 15
+tuple 0
+tuple 2
+store pm_140729703179568
+const #None#
+return

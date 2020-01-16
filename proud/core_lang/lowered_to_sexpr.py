@@ -40,7 +40,7 @@ def resolve_type(expr: Expr, comp_ctx: CompilerCtx):
         expr_type = tc_state.infer(expr.type)
         expr_type = pre_visit(replace_to_unit)((), expr_type)
         if isinstance(expr.expr, Const) and isinstance(
-                expr.type, te.App) and isinstance(expr.type.f, type_type):
+                expr.type, te.App) and expr.type == type_type:
             # TODO: serialize type objects to marshal-able repr
             expr.expr = Const(id(tc_state.infer(expr.type)))
         elif isinstance(expr.expr, Polymorphization):
@@ -100,7 +100,19 @@ class SExprGen:
             return self.fun(expr.name, expr.filename, expr.args, expr.expr)
         if isinstance(expr, ir.Extern):
             return sexpr.extern_k, expr.foreign_code
+        if isinstance(expr, ir.ITE):
+            return self.ite(expr.token, expr.cond, expr.true_clause,
+                            expr.else_clause)
         raise NotImplementedError(type(expr))
+
+    def ite(self, token, cond, tc, ec):
+        base = 'if{}'.format(id(token))
+        end_block = base + '.end'
+        true_block = base + '.true'
+        return (sexpr.block_k, [(sexpr.goto_if_k, true_block, self.eval(cond)),
+                                self.eval(ec), (sexpr.goto_k, end_block),
+                                (sexpr.label_k, true_block),
+                                self.eval(tc), (sexpr.label_k, end_block)])
 
     def set(self, name, expr):
         expr = self.eval(expr)
@@ -140,8 +152,12 @@ class SExprGen:
         return self.eval(target)
 
     def field(self, base: Expr, attr: str):
-        assert isinstance(base.type, te.Record)
-        fields, _ = te.extract_row(base.type.row)
+        base_type = base.type
+        if isinstance(base_type, te.Forall):
+            base_type = base_type.poly_type
+
+        assert isinstance(base_type, te.Record)
+        fields, _ = te.extract_row(base_type.row)
         fields = sorted(fields.keys(), key=_sort_key)
         i = fields.index(attr)
         return sexpr.prj_k, (sexpr.prj_k, self.eval(base), 0), i

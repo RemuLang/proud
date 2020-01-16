@@ -13,11 +13,11 @@ except ImportError:
     pass
 
 
-class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
-              ce.Eval_annotate, ce.Eval_binary, ce.Eval_list, ce.Eval_tuple,
-              ce.Eval_record, ce.Eval_call, ce.Eval_attr, ce.Eval_quote,
-              ce.Eval_loc, ce.Eval_coerce, ce.Eval_literal, ce.Eval_type,
-              ce.Eval_extern, ce.Eval_ite):
+class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
+              ce.Eval_binary, ce.Eval_list, ce.Eval_tuple, ce.Eval_record, ce.Eval_call,
+              ce.Eval_attr, ce.Eval_quote, ce.Eval_loc, ce.Eval_coerce, ce.Eval_literal,
+              ce.Eval_type, ce.Eval_extern, ce.Eval_ite):
+
     def extern(module, foreign_code):
         return ir.Expr(expr=ir.Extern(foreign_code),
                        type=types.Var(module._loc,
@@ -26,10 +26,12 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
 
     def ite(module, cond, true_clause, else_clause):
         cond = module.eval(cond)
-        module.comp_ctx.tc_state.unify(cond.type, types.bool_t)
+        tc_state = module.comp_ctx.tc_state
+        tc_state.unify(cond.type, types.bool_t)
         true_clause = module.eval(true_clause)
         else_clause = module.eval(else_clause)
-        return ir.ITE(cond, true_clause, else_clause)
+        tc_state.unify(true_clause.type, else_clause.type)
+        return ir.Expr(expr=ir.ITE(cond, true_clause, else_clause), type=true_clause.type)
 
     def type(module, name, definition):
         assert name is None
@@ -44,45 +46,37 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
         expr = module.eval(expr)
         loc, _ = sexpr.unloc(expr)
         return ir.Expr(expr=ir.Coerce(expr),
-                       type=types.Var(loc,
-                                      module.comp_ctx.filename,
-                                      name='coerce_var'))
+                       type=types.Var(loc, module.comp_ctx.filename, name='coerce_var'))
 
     def quote(module, contents):
         quotation = Quote(module.comp_ctx)
         quote_expr = quotation.eval(contents)
         scope: Scope = quotation.comp_ctx.scope
         arg_sym = scope.enter(".external")
-        name_var = types.Var(module._loc,
-                             module.comp_ctx.filename,
-                             name=".external")
+        name_var = types.Var(module._loc, module.comp_ctx.filename, name=".external")
         tenv = module.comp_ctx.tenv
         tenv[arg_sym] = name_var
         record_fields = []
 
         for attr_name, each in scope.freevars.items():
             record_fields.append((each, attr_name, tenv[each]))
-        rho_group = types.ForallScope(module._loc,
-                                      filename=module.comp_ctx.filename)
+        rho_group = types.ForallScope(module._loc, filename=module.comp_ctx.filename)
         rho = te.Fresh('ρ', rho_group)
         arg_type = te.Record(
             te.row_from_list([(attr, t) for _, attr, t in record_fields],
                              te.RowPoly(rho)))
         module.comp_ctx.tc_state.unify(name_var, arg_type)
-        arg_expr = ir.Expr(type=arg_type, expr=arg_sym)
+        tc_state = module.comp_ctx.tc_state
+        arg_expr = ir.Expr(type=tc_state.infer(arg_type), expr=arg_sym)
         block = [
-            ignore(
-                ir.Set(
-                    each,
-                    ir.Expr(type=t, expr=ir.Field(base=arg_expr, attr=attr))))
+            ignore(ir.Set(each, ir.Expr(type=t, expr=ir.Field(base=arg_expr, attr=attr))))
             for each, attr, t in record_fields
         ]
         block.append(quote_expr)
         ret_expr = ir.Fun("<quote>", module.comp_ctx.filename, arg_sym,
                           ir.Expr(expr=ir.Block(block), type=quote_expr.type))
         ret_type = te.Arrow(arg_type, quote_expr.type)
-        return ir.Expr(expr=ret_expr,
-                       type=te.Forall(rho_group, (rho, ), ret_type))
+        return ir.Expr(expr=ret_expr, type=te.Forall(rho_group, (rho, ), ret_type))
 
     def attr(module, base, attr_name: str):
         base = module.eval(base)
@@ -93,8 +87,7 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
         tho = types.Var(loc=module._loc,
                         filename=module.comp_ctx.filename,
                         name=attr_name + ".tho")
-        record_type = te.Record(
-            te.row_from_list([(attr_name, var)], te.RowPoly(tho)))
+        record_type = te.Record(te.row_from_list([(attr_name, var)], te.RowPoly(tho)))
 
         # TODO: how to deal with a polymorphic record value?
         # e.g., forall a. {x : a}
@@ -111,12 +104,9 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
 
         kv.sort(key=lambda tp: tp[0])
         elts = [elt for _, elt in kv]
-        mono = te.Record(
-            te.row_from_list([(k, v.type) for k, v in kv], te.empty_row))
+        mono = te.Record(te.row_from_list([(k, v.type) for k, v in kv], te.empty_row))
         left = ir.Tuple(elts)
-        left = ir.Expr(expr=ir.Tuple([anyway(left),
-                                      anyway(ir.Tuple([]))]),
-                       type=mono)
+        left = ir.Expr(expr=ir.Tuple([anyway(left), anyway(ir.Tuple([]))]), type=mono)
 
         if not row:
             return left
@@ -124,8 +114,7 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
         right = module.eval(row)
 
         my_type = te.Record(
-            te.row_from_list([(k, v.type) for k, v in kv],
-                             te.RowPoly(right.type)))
+            te.row_from_list([(k, v.type) for k, v in kv], te.RowPoly(right.type)))
 
         return ir.Expr(expr=ir.Merge(left=left, right=right), type=my_type)
 
@@ -136,8 +125,7 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
             return module.eval(elts[0])
 
         elts = list(map(module.eval, elts))
-        return ir.Expr(expr=ir.Tuple(elts),
-                       type=te.Tuple(tuple(e.type for e in elts)))
+        return ir.Expr(expr=ir.Tuple(elts), type=te.Tuple(tuple(e.type for e in elts)))
 
     def list(module, elts):
         raise NotImplementedError
@@ -169,8 +157,7 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
 
         to_mono = None
         to_poly = None
-        if isinstance(f.type, te.Forall) and isinstance(
-                f.type.poly_type, te.Arrow):
+        if isinstance(f.type, te.Forall) and isinstance(f.type.poly_type, te.Arrow):
             # layout of record might change correspondingly.
             func = f.type.poly_type
             to_mono = func.ret
@@ -186,8 +173,7 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
             assert not isinstance(f_type, te.Implicit)
 
         if isinstance(arg.type, te.Forall):
-            arg_map, arg_type = tc_state.inst_without_structure_preserved(
-                arg.type)
+            arg_map, arg_type = tc_state.inst_without_structure_preserved(arg.type)
         else:
             arg_map, arg_type = {}, arg.type
 
@@ -198,17 +184,14 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
             assert not isinstance(arg_type, te.Implicit)
 
         morph_arg_t = arg_type
-        morph_ret_t = ret_t = types.Var(module._loc,
-                                        module.comp_ctx.filename,
-                                        name="ret")
+        morph_ret_t = ret_t = types.Var(module._loc, module.comp_ctx.filename, name="ret")
 
         inst_arrow = te.Arrow(arg_type, ret_t)
         tc_state.unify(inst_arrow, f_type)
 
         if arg_map:
             gen_bounds = {}
-            forall_scope = types.ForallScope(module._loc,
-                                             module.comp_ctx.filename)
+            forall_scope = types.ForallScope(module._loc, module.comp_ctx.filename)
             for fresh_or_var, path_type in arg_map.items():
                 if not isinstance(fresh_or_var, te.Fresh):
                     continue
@@ -235,37 +218,32 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
 
                 morph_ret_t = ret_t
                 morph_arg_t = arg_type
-                ret_t = te.Forall(forall_scope, bounds,
-                                  te.pre_visit(_subst)((), ret_t))
+                ret_t = te.Forall(forall_scope, bounds, te.pre_visit(_subst)((), ret_t))
                 arg_type = te.Forall(forall_scope, bounds,
                                      te.pre_visit(_subst)((), arg_type))
 
         f.type, f_type = f_type, f.type
         if f_inst:
-            f = ir.Expr(type=f_type,
-                        expr=ir.Instance(f_inst, module.comp_ctx.scope, f))
+            f = ir.Expr(type=f_type, expr=ir.Instance(f_inst, module.comp_ctx.scope, f))
         else:
             f.type = f_type
 
         if arg_inst:
             arg = ir.Expr(type=arg_type,
-                          expr=ir.Instance(arg_inst, module.comp_ctx.scope,
-                                           arg))
+                          expr=ir.Instance(arg_inst, module.comp_ctx.scope, arg))
         else:
             arg.type = arg_type
 
         if to_poly:
             arg.type = morph_arg_t
             arg = ir.Expr(type=arg_type,
-                          expr=ir.Polymorphization(layout_type=to_poly,
-                                                   expr=arg))
+                          expr=ir.Polymorphization(layout_type=to_poly, expr=arg))
 
         ret = ir.Expr(type=ret_t, expr=ir.Invoke(f, arg))
         if to_mono:
             ret.type = morph_ret_t
             ret = ir.Expr(type=ret_t,
-                          expr=ir.Momomorphization(layout_type=to_mono,
-                                                   expr=ret))
+                          expr=ir.Momomorphization(layout_type=to_mono, expr=ret))
         return ret
 
     def lam(module, arg, type, ret):
@@ -306,8 +284,8 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
                 if isinstance(my_type, te.Forall):
                     my_type_for_unify = types.remove_bound_scope(my_type)
             else:
-                my_type = my_type_for_unify = types.Var(
-                    loc, module.comp_ctx.filename, name)
+                my_type = my_type_for_unify = types.Var(loc, module.comp_ctx.filename,
+                                                        name)
 
             if is_rec:
                 me = sub_scope.enter(name)
@@ -321,15 +299,13 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match,
             bound_type = tc_state.infer(bound.type)
 
             if type:
-                _, bound_type = tc_state.inst_without_structure_preserved(
-                    bound_type)
+                _, bound_type = tc_state.inst_without_structure_preserved(bound_type)
                 bound.type = bound_type
 
             tc_state.unify(my_type_for_unify, bound_type)
             body = module.eval(body)
 
-            my_exp = ir.Block(
-                [ignore(ir.WrapLoc(loc, ignore(ir.Set(me, bound)))), body])
+            my_exp = ir.Block([ignore(ir.WrapLoc(loc, ignore(ir.Set(me, bound)))), body])
             return ir.Expr(type=body.type, expr=my_exp)
 
     def eval_sym(self, x: str) -> ir.Expr:

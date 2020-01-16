@@ -1,0 +1,25 @@
+runtime operator
+filename "example_code\\row_field.prd"
+line 1
+line 3
+line 3
+line 3
+const #0#
+deref! my_140729703178608
+line 4
+line 4
+line 4
+deref my_140729703178608
+const #0#
+prj
+const #1#
+prj
+store another_field_140729703178640
+load another_field_140729703178640
+deref my_140729703178608
+tuple 2
+tuple 0
+tuple 2
+store MyMod_140729703178672
+const #None#
+return

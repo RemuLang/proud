@@ -12,8 +12,10 @@ except ImportError:
     pass
 
 __all__ = [
-    'type_map', 'CompilerCtx', 'keep', 'Evaluator', 'anyway', 'unit', 'ignore'
+    'type_map', 'CompilerCtx', 'keep', 'Evaluator', 'anyway', 'unit', 'ignore', 'wrap_loc',
+    'Interpreter', 'CompilerLocalContext', 'CompilerGlobalContext', 'Location'
 ]
+Location = typing.Tuple[int, int]
 
 type_map = {
     int: types.int_t,
@@ -28,13 +30,69 @@ def ignore(ex: ir.BaseExpr):
     return ir.Expr(type=types.unit_t, expr=ex)
 
 
+def anyway(x: ir.BaseExpr):
+    return ir.Expr(expr=x, type=types.anyway_type)
+
+
+def wrap_loc(loc: Location, expr: ir.Expr):
+    return ignore(ir.WrapLoc(loc, expr))
+
+
 unit = ir.Expr(type=types.unit_t, expr=ir.Const(()))
 
 
+## Compiler contexts
+class CompilerGlobalContext:
+    tc_state: TCState
+    tenv: typing.Dict[Sym, te.T]
+    backend: 'BackEnd'
+
+    def __init__(self, tc_state: TCState, tenv: typing.Dict[Sym, te.T],
+                 backend: 'BackEnd'):
+        self.tc_state = tc_state
+        self.tenv = tenv
+        self.backend = backend
+
+    @classmethod
+    def create(cls, backend: 'BackEnd'):
+        return cls(TCState({}), {}, backend)
+
+
+class CompilerLocalContext:
+    scope: Scope
+    filename: str
+    path: str
+    location: typing.Optional[Location]
+
+    def __init__(self,
+                 scope: Scope,
+                 filename: str,
+                 path: str,
+                 location: typing.Optional[Location] = None):
+        self.scope = scope
+        self.filename = filename
+        self.path = path
+        self.location = location
+
+    @classmethod
+    def top(cls, filename: str, path: str, location=(0, 0)):
+        return cls(Scope.top(), filename, path, location)
+
+
+## Interpreter base class
+class Interpreter:
+    clc: CompilerLocalContext
+
+    def __init__(self, clc: CompilerLocalContext):
+        self.clc = clc
+
+    def eval(self, node: tuple):
+        raise NotImplementedError
+
+
 class CompilerCtx(
-        namedtuple(
-            "CompilerCtx",
-            ["scope", "tc_state", "tenv", "filename", "path", "backend"])):
+        namedtuple("CompilerCtx",
+                   ["scope", "tc_state", "tenv", "filename", "path", "backend"])):
     """
     You're supposed to init following types before compilation:
     - a type named unit
@@ -70,12 +128,8 @@ class CompilerCtx(
         return cls(Scope.top(), TCState({}), {}, filename, path, backend)
 
     def with_scope(self, scope: Scope):
-        return CompilerCtx(scope, self.tc_state, self.tenv, self.filename,
-                           self.path, self.backend)
-
-    def with_path(self, path: str):
-        filename, _ = self.backend.search_module(path.split('.'))
-        return CompilerCtx(self.scope, self.tc_state, self.tenv, filename, path, self.backend)
+        return CompilerCtx(scope, self.tc_state, self.tenv, self.filename, self.path,
+                           self.backend)
 
 
 @contextmanager
@@ -85,10 +139,6 @@ def keep(self):
         yield
     finally:
         self.comp_ctx = comp
-
-
-def anyway(x: ir.BaseExpr):
-    return ir.Expr(expr=x, type=types.type_type)
 
 
 class Evaluator:
