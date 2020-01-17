@@ -22,7 +22,7 @@ class LabelName:
 @dataclass
 class Instance:
     inst_t: te.T
-    scope: scope.Scope
+    scope: t.List[scope.Sym]
     expr: 'Expr'
 
     def __repr__(self):

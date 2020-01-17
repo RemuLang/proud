@@ -1,5 +1,6 @@
 from proud.core_lang import sexpr, lowered_ir as ir, composable_evaluator as ce, types
 from proud.core_lang.scope import Scope, Sym
+from proud.core_lang.polymorphisms import implicit_and_generalise
 from hybridts import type_encoding as te
 from proud.core_lang.modular_compiler import *
 import typing
@@ -48,20 +49,98 @@ def make(cgc: CompilerGlobalContext):
                   ce.Eval_call, ce.Eval_attr, ce.Eval_quote, ce.Eval_loc, ce.Eval_coerce,
                   ce.Eval_literal, ce.Eval_type, ce.Eval_extern, ce.Eval_ite):
 
+        def eval_with_instance_resolution(self, x):
+            clc = self.clc
+            x: ir.Expr = self.eval(x)
+            after_unification = implicit_and_generalise(clc.scope,
+                                                        tc_state,
+                                                        x,
+                                                        loc=clc.location,
+                                                        filename=clc.filename)
+            return x, after_unification
+
         def extern(module, foreign_code):
             clc = module.clc
             return ir.Expr(expr=ir.Extern(foreign_code),
                            type=types.Var(clc.location, clc.filename, name="extern\'"))
 
         def ite(module, cond, true_clause, else_clause):
-            cond = module.eval(cond)
-            tc_state = module.comp_ctx.tc_state
-            tc_state.unify(cond.type, types.bool_t)
-            true_clause = module.eval(true_clause)
-            else_clause = module.eval(else_clause)
-            tc_state.unify(true_clause.type, else_clause.type)
-            return ir.Expr(expr=ir.ITE(cond, true_clause, else_clause), type=true_clause.type)
 
+            cond, after_unif1 = module.eval_with_instance_resolution(cond)
+            tc_state.unify(cond.type, types.bool_t)
+            after_unif1()
+
+            tc, after_unif2 = module.eval_with_instance_resolution(true_clause)
+            ec, after_unif3 = module.eval_with_instance_resolution(else_clause)
+
+            tc_state.unify(tc.type, ec.type)
+            after_unif2()
+            after_unif2()
+
+            return ir.Expr(expr=ir.ITE(cond, tc, ec), type=tc.type)
+
+        def type(module, name, definition):
+            assert name is None
+            t = Typing(module.clc).eval(definition)
+            return ir.Expr(expr=ir.Const(t), type=te.App(types.type_type, t))
+
+        def literal(module, val):
+            my_type = type_map[type(val)]
+            return ir.Expr(type=my_type, expr=ir.Const(val))
+
+        def coerce(module, expr):
+            expr = module.eval(expr)
+            loc, _ = sexpr.unloc(expr)
+            return ir.Expr(expr=ir.Coerce(expr),
+                           type=types.Var(loc, module.clc.filename, name='coerce_var'))
+
+        def attr(module, base, attr_name: str):
+            base, after_base_unif = module.eval_with_instance_resolution(base)
+            loc, filename = module.clc.location, module.clc.filename
+            var = types.Var(loc=loc, filename=filename, name=attr_name + ".getter")
+            tho = types.Var(loc=loc, filename=filename, name=attr_name + ".tho")
+            record_type = te.Record(te.row_from_list([(attr_name, var)], te.RowPoly(tho)))
+
+            # TODO: how to deal with a polymorphic record value?
+            # e.g., forall a. {x : a}
+            tc_state.unify(record_type, base.type)
+            after_base_unif()
+
+            return ir.Expr(expr=ir.Field(base=base, attr=attr_name), type=var)
+
+        def record(module, pairs, row):
+            kv = []
+
+            for each in pairs:
+                loc, (attr_name, expr) = sexpr.unloc(each)
+                expr, after_unif = module.eval_with_instance_resolution(expr)
+                after_unif()
+                kv.append((attr_name, expr))
+
+            kv.sort(key=lambda tp: tp[0])
+            elts = [elt for _, elt in kv]
+            mono = te.Record(te.row_from_list([(k, v.type) for k, v in kv], te.empty_row))
+            left = ir.Tuple(elts)
+
+            if not row:
+                left = ir.Expr(expr=ir.Tuple([anyway(left), anyway(ir.Tuple([]))]), type=mono)
+                return left
+
+            right, after_unif = module.eval_with_instance_resolution(row)
+            after_unif()
+            my_type = te.Record(te.row_from_list([(k, v.type) for k, v in kv], te.RowPoly(right.type)))
+            return ir.Expr(expr=ir.Merge(left=anyway(left), right=right), type=my_type)
+
+        def tuple(module, elts):
+            if not elts:
+                return ir.Expr(expr=ir.Const(()), type=types.unit_t)
+            if len(elts) is 1:
+                elt, after_unif = module.eval_with_instance_resolution(elts[0])
+                after_unif()
+                return elt
+
+            elts = list(map(module.eval, elts))
+            return ir.Expr(expr=ir.Tuple(elts), type=te.Tuple(tuple(e.type for e in elts)))
 
 class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
               ce.Eval_binary, ce.Eval_list, ce.Eval_tuple, ce.Eval_record, ce.Eval_call,
@@ -98,35 +177,7 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annota
         return ir.Expr(expr=ir.Coerce(expr),
                        type=types.Var(loc, module.comp_ctx.filename, name='coerce_var'))
 
-    def quote(module, contents):
-        quotation = Quote(module.comp_ctx)
-        quote_expr = quotation.eval(contents)
-        scope: Scope = quotation.comp_ctx.scope
-        arg_sym = scope.enter(".external")
-        name_var = types.Var(module._loc, module.comp_ctx.filename, name=".external")
-        tenv = module.comp_ctx.tenv
-        tenv[arg_sym] = name_var
-        record_fields = []
 
-        for attr_name, each in scope.freevars.items():
-            record_fields.append((each, attr_name, tenv[each]))
-        rho_group = types.ForallScope(module._loc, filename=module.comp_ctx.filename)
-        rho = te.Fresh('ρ', rho_group)
-        arg_type = te.Record(
-            te.row_from_list([(attr, t) for _, attr, t in record_fields],
-                             te.RowPoly(rho)))
-        module.comp_ctx.tc_state.unify(name_var, arg_type)
-        tc_state = module.comp_ctx.tc_state
-        arg_expr = ir.Expr(type=tc_state.infer(arg_type), expr=arg_sym)
-        block = [
-            ignore(ir.Set(each, ir.Expr(type=t, expr=ir.Field(base=arg_expr, attr=attr))))
-            for each, attr, t in record_fields
-        ]
-        block.append(quote_expr)
-        ret_expr = ir.Fun("<quote>", module.comp_ctx.filename, arg_sym,
-                          ir.Expr(expr=ir.Block(block), type=quote_expr.type))
-        ret_type = te.Arrow(arg_type, quote_expr.type)
-        return ir.Expr(expr=ret_expr, type=te.Forall(rho_group, (rho, ), ret_type))
 
     def attr(module, base, attr_name: str):
         base = module.eval(base)
@@ -372,3 +423,33 @@ class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annota
             return self.eval_sym(x)
 
         raise TypeError(x)
+
+    def quote(module, contents):
+        quotation = Quote(module.comp_ctx)
+        quote_expr = quotation.eval(contents)
+        scope: Scope = quotation.comp_ctx.scope
+        arg_sym = scope.enter(".external")
+        name_var = types.Var(module._loc, module.comp_ctx.filename, name=".external")
+        tenv = module.comp_ctx.tenv
+        tenv[arg_sym] = name_var
+        record_fields = []
+
+        for attr_name, each in scope.freevars.items():
+            record_fields.append((each, attr_name, tenv[each]))
+        rho_group = types.ForallScope(module._loc, filename=module.comp_ctx.filename)
+        rho = te.Fresh('ρ', rho_group)
+        arg_type = te.Record(
+            te.row_from_list([(attr, t) for _, attr, t in record_fields],
+                             te.RowPoly(rho)))
+        module.comp_ctx.tc_state.unify(name_var, arg_type)
+        tc_state = module.comp_ctx.tc_state
+        arg_expr = ir.Expr(type=tc_state.infer(arg_type), expr=arg_sym)
+        block = [
+            ignore(ir.Set(each, ir.Expr(type=t, expr=ir.Field(base=arg_expr, attr=attr))))
+            for each, attr, t in record_fields
+        ]
+        block.append(quote_expr)
+        ret_expr = ir.Fun("<quote>", module.comp_ctx.filename, arg_sym,
+                          ir.Expr(expr=ir.Block(block), type=quote_expr.type))
+        ret_type = te.Arrow(arg_type, quote_expr.type)
+        return ir.Expr(expr=ret_expr, type=te.Forall(rho_group, (rho, ), ret_type))

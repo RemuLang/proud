@@ -2,7 +2,7 @@ from proud.helpers import MissingDict, Ref
 from proud.core_lang import sexpr, lowered_ir as ir, composable_evaluator as ce, types
 from proud.core_lang.scope import Sym, Scope
 from proud.core_lang.modular_compiler import *
-from proud.core_lang.check_valid import assure_not_generalised_record_value
+from proud.core_lang.polymorphisms import implicit_and_generalise
 from proud.parser.parser_wrap import parse
 from hybridts import type_encoding as te
 import typing
@@ -130,7 +130,9 @@ def make(cgc: CompilerGlobalContext):
             # recursive module.
             if is_rec:
                 sym_mod = scope.enter(name)
-                type_mod = tenv[sym_mod] = types.Var(loc=loc, filename=filename, name=path)
+                type_mod = tenv[sym_mod] = types.Var(loc=loc,
+                                                     filename=filename,
+                                                     name=path)
                 outer_stmts.append(ignore(ir.Set(sym_mod, ignore(ir.Const(())))))
 
             # for preprocessing
@@ -169,7 +171,10 @@ def make(cgc: CompilerGlobalContext):
             elts_mod = [ir.Expr(type=tenv[sym], expr=sym) for sym in syms]
             elts_mod.sort(key=_sort_sym)
 
-            val_mod = ir.Expr(type=type_mod, expr=ir.Tuple([anyway(ir.Tuple(elts_mod)), anyway(ir.Tuple([]))]))
+            val_mod = ir.Expr(type=type_mod,
+                              expr=ir.Tuple(
+                                  [anyway(ir.Tuple(elts_mod)),
+                                   anyway(ir.Tuple([]))]))
             inner_stmts.append(val_mod)
 
             exp_mod = ir.Expr(type=type_mod, expr=ir.Block(inner_stmts))
@@ -206,57 +211,21 @@ def make(cgc: CompilerGlobalContext):
                     # my_type = my_type_for_unify = name_var
 
                 bound: ir.Expr = module.eval(bound)
-                t2 = bound.type
 
-                t2 = tc_state.infer(t2)
                 t1 = tc_state.infer(t1)
+                _, t1_inst = tc_state.inst_without_structure_preserved(t1, rigid=True)
 
-                assure_not_generalised_record_value(t1)
-
-                TV1, t1_inst = tc_state.inst_without_structure_preserved(t1, rigid=True)
-                TV2, t2_inst = tc_state.inst_without_structure_preserved(t2, rigid=False)
-
-                TV = list(TV1.values()) + list(TV2.values())
-
-                implicit_args = []
-                while isinstance(t2_inst, te.Implicit):
-                    implicit_args.append(t2_inst.witness)
-                    t2_inst = t2_inst.type
+                # type classes & generalised values & first class polymorphisms
+                after_unification = implicit_and_generalise(
+                        scope, tc_state, bound,
+                        loc=loc, filename=clc.filename
+                )
+                t2_inst = bound.type
 
                 tc_state.unify(t1_inst, t2_inst)
 
-                #  Try to generalise value
-                forall = types.ForallScope(loc, clc.filename)
-
-                def default(_, ref=Ref(0)):
-                    ith = ref.contents
-                    ref.contents += 1
-                    return te.Fresh('a{}'.format(ith), forall)
-
-                generalised_vars = MissingDict(default)
-                for tv in TV:
-                    tv = tc_state.infer(tv)
-                    if isinstance(tv, te.Var):
-                        _ = generalised_vars[tv]
-
-                if generalised_vars:
-                    bounds = tuple(generalised_vars.values())
-                    for var, forall_bound in generalised_vars:
-                        tc_state.unify(var, forall_bound)
-
-                    t2_inst = te.Forall(forall, bounds, tc_state.infer(t2_inst))
-
-                bound.type = t2_inst
-
-                # type class
-                if implicit_args:
-                    implicit_args.reverse()
-                    for implicit_arg in implicit_args:
-                        bound.expr = ir.Instance(
-                            implicit_arg,
-                            scope,
-                            ir.Expr(type=t2_inst, expr=bound.expr)
-                        )
+                # both implicit arguments and generalising got resolved here
+                after_unification()
 
                 exp_def = ir.Set(sym_def, bound)
                 return ignore(exp_def)
