@@ -1,1 +1,1 @@
-import proud.core_lang.modular_compiler.setup
+# import proud.core_lang.modular_compiler.setup

@@ -1,6 +1,6 @@
 import abc
 import typing as t
-from hybridts import exc
+from proud import excs
 from warnings import warn
 from dataclasses import dataclass
 
@@ -24,6 +24,7 @@ class ForallGroup:
 
 
 class InternalForallScope(ForallGroup):
+
     def __init__(self, name: str):
         self._name = name
 
@@ -31,8 +32,61 @@ class InternalForallScope(ForallGroup):
         return '{}'.format(self._name)
 
 
-class Var:
+class Property:
     pass
+
+
+@dataclass(eq=True, order=True, frozen=True)
+class IsRigid(Property):
+    pass
+
+
+is_rigid = IsRigid()
+
+
+class PropertyTVGroup:
+    final: t.Optional['T']
+    link_from: t.Set['PropertyTVGroup']
+    vars: t.Set['Var']
+
+    def __init__(self, *props: Property):
+        self.vars = set()
+        self.properties = set(props)
+        self.link_from = set()
+        self.final = None
+
+    def add(self, var: 'Var'):
+        self.vars.add(var)
+
+    def final_to(self, type: 'T'):
+        if isinstance(type, Var):
+            if type.belong_to is self:
+                return
+            self.merge_into_(type.belong_to)
+            return
+
+        TV = ftv(type)
+        for each in TV:
+            if each.belong_to is self:
+                continue
+            each.belong_to.link_from.add(self)
+        self.final = type
+
+    def merge_into_(self, another: 'PropertyTVGroup'):
+        for each in self.vars:
+            each.belong_to = another
+        another.vars |= self.vars
+        another.link_from |= self.link_from
+        another.properties |= self.properties
+
+    def destroy_(self, levels: t.List[t.Set['Var']]):
+        for each in self.vars:
+            levels[each.level].remove(each)
+
+
+class Var:
+    level: int
+    belong_to: PropertyTVGroup
 
 
 _encode_list = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()_+{}[]|\\:;" '<,>.?/'
@@ -51,15 +105,17 @@ def _shorter_string_base(num):
 if DEBUG:
     cnt = 0
 
+
     class InternalVar(Var):
         """
         This kind of type variable is not user-created, but you does can,
         if you don't mind the bad error reporting :)
         """
-        def __init__(self, name=None):
 
+        def __init__(self, level: int, name=None):
             global cnt
             self.name = name
+            self.level = level
             self.id = cnt
             cnt += 1
 
@@ -67,28 +123,18 @@ if DEBUG:
             return '{}{}'.format(self.name or 'var', self.id)
 
 else:
-
     class InternalVar(Var):
         """
         This kind of type variable is not user-created, but you does can,
         if you don't mind the bad error reporting :)
         """
-        def __init__(self, name=None):
+
+        def __init__(self, level: int, name=None):
+            self.level = level
             self.name = name
 
         def __repr__(self):
-            return '{}{}'.format(self.name or 'var',
-                                 _shorter_string_base(id(self)))
-
-
-G = t.TypeVar('G')
-
-
-class Ref(t.Generic[G]):
-    contents: G
-
-    def __init__(self, contents: G):
-        self.contents = contents
+            return '{}{}'.format(self.name or 'var', _shorter_string_base(id(self)))
 
 
 @dataclass(eq=True, frozen=True, order=True)
@@ -136,6 +182,7 @@ class Arrow:
 
 
 class Nom(abc.ABC):
+
     @abc.abstractmethod
     def get_name(self) -> str:
         raise NotImplementedError
@@ -145,6 +192,7 @@ class Nom(abc.ABC):
 
 
 class InternalNom(Nom):
+
     def __init__(self, name):
         self._name = name
 
@@ -171,8 +219,7 @@ class Forall:
     poly_type: 'T'
 
     def __repr__(self):
-        return 'forall {}. {!r}'.format(' '.join(_repr_many(self.fresh_vars)),
-                                        self.poly_type)
+        return 'forall {}. {!r}'.format(' '.join(_repr_many(self.fresh_vars)), self.poly_type)
 
 
 @dataclass(eq=True, frozen=True, order=True)
@@ -181,8 +228,7 @@ class Record:
 
     def __repr__(self):
         fields, tho = extract_row(self.row)
-        field_str = ', '.join('{}: {!r}'.format(k, t)
-                              for k, t in fields.items())
+        field_str = ', '.join('{}: {!r}'.format(k, t) for k, t in fields.items())
         if not tho:
             return '{{{}}}'.format(field_str)
         return '{{{}|{!r}}}'.format(field_str, tho)
@@ -200,6 +246,7 @@ class UnboundFresh:
 
 
 class GenericVar:
+
     def __init__(self, name):
         self.name = name
         self.eq = None
@@ -208,8 +255,7 @@ class GenericVar:
         return self.name
 
 
-T = t.Union[App, Arrow, Var, Nom, Bound, Tuple, Forall, Record, Implicit,
-            GenericVar, UnboundFresh]
+T = t.Union[App, Arrow, Var, Nom, Bound, Tuple, Forall, Record, Implicit, GenericVar, UnboundFresh]
 Path = t.Union[App, Arrow, Var, Bound, Tuple, Forall, Record, Implicit]
 TypeCtx = t.Dict[Var, T]
 Handler = t.Callable
@@ -230,8 +276,7 @@ def pre_visit(f: t.Callable[[_Ctx, T], t.Tuple[_Ctx, T]]):
 
         def eval_row(root: Row) -> Row:
             if isinstance(root, RowCons):
-                return RowCons(root.field_name, eval_t(root.field_type),
-                               eval_row(root.tail))
+                return RowCons(root.field_name, eval_t(root.field_type), eval_row(root.tail))
             if isinstance(root, RowMono):
                 return root
 
@@ -332,7 +377,7 @@ def normalize_forall(bounds: t.Iterable[str], poly):
     return Forall(token, tuple(maps.values()), poly)
 
 
-def ftv(t):
+def ftv(t: T) -> t.Set[Var]:
     vars: t.Set[Var] = set()
 
     def _visit(t):
@@ -344,68 +389,47 @@ def ftv(t):
     return vars
 
 
-def unbounds(t):
-    bounds = set()
-
-    def _visit(ctx, t):
-        if isinstance(t, Forall):
-            ctx = {*ctx, t.token}
-            return ctx, t
-        elif isinstance(t, Bound):
-            if t.token not in ctx:
-                bounds.add(t)
-            return ctx, t
-        return ctx, t
-
-    pre_visit(_visit)(set(), t)
-    return bounds
-
-
-def any_in(t, types: t.Set[T]):
-    found_bounds = False
+def generics(t):
+    vars: t.Set[Var] = set()
 
     def _visit(t):
-        nonlocal found_bounds
-        if t in types:
-            found_bounds = True
-            return False
+        if isinstance(t, GenericVar):
+            vars.add(t)
         return True
 
     visit_check(_visit)(t)
-    return found_bounds
+    return vars
 
 
-def _variable_fresh_visitor(mapping: dict, t: 'T') -> t.Tuple[dict, 'T']:
-    v = mapping.get(t)
-    if v:
-        return mapping, v
-    if isinstance(t, Var):
-        v = mapping[t] = InternalVar()
-        return mapping, v
-    return mapping, t
+def subst_once(subst_map: t.Dict[T, T], ty):
+    return subst_map, subst_map.get(ty, ty)
 
 
-_fresh_vars = pre_visit(_variable_fresh_visitor)
+def subst(subst_map: t.Dict[T, T], ty: T):
+    return pre_visit(subst_once)(subst_map, ty)
 
 
-def fresh_ftv(t: T, mapping=None) -> t.Tuple[t.Dict[Var, Var], T]:
-    if mapping is None:
-        mapping = {}
-    return mapping, _fresh_vars(mapping, t)
+def occur_in(var: T, ty: T) -> bool:
+    if var is ty:
+        return False
+
+    def visit_func(tt: T):
+        return not isinstance(tt, Var) or tt is not var
+
+    return not visit_check(visit_func)(ty)
 
 
 _var_and_fresh = (Var, Bound)
 
 
-def _bound_but_no_var_fresh_visitor(mapping: dict,
-                                    t: 'T') -> t.Tuple[dict, 'T']:
+def _bound_but_no_var_fresh_visitor(mapping: dict, t: 'T') -> t.Tuple[dict, 'T']:
     return mapping, mapping.get(t, t)
 
 
 _fresh_bound_but_no_var = pre_visit(_bound_but_no_var_fresh_visitor)
 
 
-def just_fresh_bounds(t: T, mapping=None) -> t.Tuple[t.Dict[Bound, Var], T]:
+def fresh_bounds(t: T, mapping=None) -> t.Tuple[t.Dict[Bound, Var], T]:
     if mapping is None:
         mapping = {}
     return mapping, _fresh_bound_but_no_var(mapping, t)
@@ -415,7 +439,7 @@ def _extract_row(fields: t.Dict[str, T], rowt: Row) -> t.Optional[T]:
     if isinstance(rowt, RowCons):
         field_name = rowt.field_name
         if field_name in fields:
-            raise exc.RowFieldDuplicated(field_name)
+            raise excs.RowFieldDuplicated(field_name)
         fields[field_name] = rowt.field_type
         return _extract_row(fields, rowt.tail)
     if isinstance(rowt, RowMono):

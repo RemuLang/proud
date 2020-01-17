@@ -71,3 +71,7 @@ class RigidTypeExpanding(TypeCheckError):
 
 class StructureCannotUnify(TypeCheckError):
     pass
+
+
+class RowCheckFailed(Exception):
+    pass
