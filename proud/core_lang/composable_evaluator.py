@@ -47,12 +47,12 @@ dispatcher[def_k] = define
 
 class Eval_let(Protocol):
     @abc.abstractmethod
-    def let(module, is_rec, name, type, bound, body):
+    def let(module, is_rec, seq, body):
         ...
 
 
-def let(is_rec, name, type, bound, body):
-    return lambda module: module.let(is_rec, name, type, bound, body)
+def let(is_rec, seq, body):
+    return lambda module: module.let(is_rec, seq, body)
 
 
 dispatcher[let_k] = let

@@ -18,7 +18,7 @@ class ASTTag:
 lit_k = ASTTag("literal", ["val"])
 coerce_k = ASTTag("coerce", ["expr"])
 def_k = ASTTag("define", ["export", "gname", "type", "bound"])
-let_k = ASTTag("let", ["is_rec", "name", "type", "bound", "body"])
+let_k = ASTTag("let", ["is_rec", "seq", "body"])
 type_k = ASTTag("type", ["name", "definition"])
 and_k = ASTTag("intersect", ["left", "right"])
 or_k = ASTTag("alt", ["left", "right"])

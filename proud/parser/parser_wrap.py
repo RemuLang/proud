@@ -18,7 +18,12 @@ def loc_(a, x: Token):
     return loc_k, (x.lineno + 1, x.colno), a
 
 
+def get_loc(x: Token):
+    return (x.lineno + 1, x.colno)
+
+
 ctx['loc_'] = loc_
+ctx['loc'] = get_loc
 ctx['DQString'] = DQString
 
 _parse = mk_parser(**ctx)
