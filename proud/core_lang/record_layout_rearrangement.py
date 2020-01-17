@@ -57,6 +57,8 @@ def rec_polymorphize(require: te.T, actual: te.T):
 def polymorphize(require: te.T, actual: te.T):
     if not isinstance(require, (te.Tuple, te.Record)):
         return
+    if not isinstance(actual, (te.Tuple, te.Record)):
+        return
     return rec_polymorphize(require, actual)
 
 
@@ -93,6 +95,8 @@ def rec_monomorphize(require: te.T, actual: te.T):
 
 
 def monomorphize(require: te.T, actual: te.T):
+    if not isinstance(require, (te.Tuple, te.Record)):
+        return
     if not isinstance(actual, (te.Tuple, te.Record)):
         return
 

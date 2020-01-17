@@ -4,7 +4,7 @@ from proud.core_lang.types import type_type
 from proud.core_lang.unique_scope import UniqueScope
 from proud.core_lang import sexpr
 from proud.core_lang.record_layout_rearrangement import polymorphize, monomorphize
-from proud.core_lang.modular_compiler import CompilerCtx
+from proud.core_lang.modular_compiler import CompilerGlobalContext
 from hybridts.type_encoding import pre_visit
 from contextlib import contextmanager
 import proud.core_lang.lowered_ir as ir
@@ -26,7 +26,7 @@ def replace_to_unit(_, t):
     return (), t
 
 
-def resolve_type(expr: Expr, comp_ctx: CompilerCtx):
+def resolve_type(expr: Expr, comp_ctx: CompilerGlobalContext):
     tc_state = comp_ctx.tc_state
 
     def resolve(expr: Expr):

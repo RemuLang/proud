@@ -1,5 +1,5 @@
 from proud.core_lang import composable_evaluator as ce
-from proud.core_lang.modular_compiler import CompilerCtx
+from proud.core_lang.modular_compiler import CompilerGlobalContext
 from proud.core_lang.sexpr import is_ast
 from proud.core_lang.scope import Sym, Scope
 from proud.core_lang import types
@@ -19,19 +19,19 @@ class Numbering(dict):
 
 
 class PyBackEnd(BackEnd):
-    top: typing.Optional[CompilerCtx]
-
-    def mk_top_scope(self) -> Scope:
-        if not self.top:
-            raise ValueError
-        return self.top.scope.sub_scope(hold_bound=True)
-
-    def remember_module(self, path, mod_sym: Sym) -> None:
-        self.modules[path].exist = mod_sym
+    top: typing.Optional[Scope]
 
     def __init__(self):
         self.modules: typing.Dict[str, ModuleFinder] = {}
         self.top = None
+
+    def mk_top_scope(self) -> Scope:
+        if not self.top:
+            raise ValueError
+        return self.top.sub_scope(hold_bound=True)
+
+    def remember_module(self, path, mod_sym: Sym) -> None:
+        self.modules[path].exist = mod_sym
 
     def search_module(self, qualname: typing.List[str]) -> ModuleFinder:
         path = '.'.join(qualname)
@@ -58,28 +58,27 @@ class PyBackEnd(BackEnd):
                                     filename=filename)
         raise IOError("Unknown module {}".format(path))
 
-    def init_compiler_ctx(self, filename, path) -> CompilerCtx:
-        comp_ctx: CompilerCtx = CompilerCtx.top("builtin", "builtin", self)
-        sym = comp_ctx.scope.enter("int")
-        comp_ctx.tenv[sym] = te.App(types.type_type, types.int_t)
-        sym = comp_ctx.scope.enter("string")
-        comp_ctx.tenv[sym] = te.App(types.type_type, types.string_t)
-        sym = comp_ctx.scope.enter("bool")
-        comp_ctx.tenv[sym] = te.App(types.type_type, types.bool_t)
-        sym = comp_ctx.scope.enter("float")
-        comp_ctx.tenv[sym] = te.App(types.type_type, types.float_t)
-        sym = comp_ctx.scope.enter("unit")
-        comp_ctx.tenv[sym] = te.App(types.type_type, types.unit_t)
-        sym = comp_ctx.scope.enter("value")
-        comp_ctx.tenv[sym] = te.App(types.type_type, types.type_type)
-        sym = comp_ctx.scope.enter("list")
-        comp_ctx.tenv[sym] = te.App(types.type_type, types.list_t)
-        self.top = comp_ctx
-        return CompilerCtx(self.mk_top_scope(), comp_ctx.tc_state,
-                           comp_ctx.tenv, filename, path, self)
+    def init_global_context(self) -> CompilerGlobalContext:
+        ctx = CompilerGlobalContext.create(self)
+        scope = self.top = Scope.top()
+        sym = scope.enter("int")
+        ctx.tenv[sym] = te.App(types.type_type, types.int_t)
+        sym = scope.enter("string")
+        ctx.tenv[sym] = te.App(types.type_type, types.string_t)
+        sym = scope.enter("bool")
+        ctx.tenv[sym] = te.App(types.type_type, types.bool_t)
+        sym = scope.enter("float")
+        ctx.tenv[sym] = te.App(types.type_type, types.float_t)
+        sym = scope.enter("unit")
+        ctx.tenv[sym] = te.App(types.type_type, types.unit_t)
+        sym = scope.enter("value")
+        ctx.tenv[sym] = te.App(types.type_type, types.type_type)
+        sym = scope.enter("list")
+        ctx.tenv[sym] = te.App(types.type_type, types.list_t)
+        return ctx
 
-    def codegen(self, compiler_ctx: CompilerCtx, sexpr) -> str:
-        generator = CodeGen(compiler_ctx.filename, backend=self)
+    def codegen(self, ctx: CompilerGlobalContext, sexpr) -> str:
+        generator = CodeGen(self.filename, backend=self)
         generator.eval(sexpr)
         return generator.feed_code()
 
@@ -88,9 +87,6 @@ class CodeGen(ce.Eval_set, ce.Eval_func, ce.Eval_invoke, ce.Eval_loc,
               ce.Eval_prj, ce.Eval_label, ce.Eval_goto, ce.Eval_goto_if,
               ce.Eval_goto_if_not, ce.Eval_indir, ce.Eval_addr, ce.Eval_block,
               ce.Eval_tuple, ce.Eval_list, ce.Eval_switch, ce.Eval_extern):
-    def extern(module, foreign_code):
-        module("const #{}#".format(
-            json.decoder.py_scanstring(foreign_code, 1)[0]))
 
     def __init__(self, filename: str, backend: PyBackEnd):
         self.code = [
@@ -98,6 +94,10 @@ class CodeGen(ce.Eval_set, ce.Eval_func, ce.Eval_invoke, ce.Eval_loc,
         ]
         self.layout = 0
         self.number = Numbering()
+
+    def extern(module, foreign_code):
+        module("const #{}#".format(
+            json.decoder.py_scanstring(foreign_code, 1)[0]))
 
     def s2n(self, s: Sym) -> str:
         return '{}_{}'.format(s.name, id(self.number[s.uid]))

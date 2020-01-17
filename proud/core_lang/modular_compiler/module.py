@@ -21,26 +21,15 @@ def make(cgc: CompilerGlobalContext):
     Typing = typing.cast(typing.Callable[[CompilerLocalContext], Interpreter], None)
     Express = typing.cast(typing.Callable[[CompilerLocalContext], Interpreter], None)
 
-    def link_typing(**evaluators):
+    def link_typing(evaluators):
         nonlocal Typing
         Typing = evaluators['Typing']
 
-    def link_express(**evaluators):
+    def link_express(evaluators):
         nonlocal Express
         Express = evaluators['Express']
 
     def type_of_value(sym: Sym):
-        return tenv[sym]
-
-    def type_of_type(sym: Sym) -> te.T:
-        t = tc_state.infer(tenv[sym])
-        if isinstance(t, te.App) and t.f is types.type_type:
-            return t.arg
-        what_i_want = te.InternalVar(is_rigid=False)
-        tc_state.unify(t, te.App(types.type_type, what_i_want))
-        return what_i_want
-
-    def value_of_type(sym: Sym):
         return tenv[sym]
 
     class Modular(Interpreter, ce.Eval_module, ce.Eval_loc, ce.Eval_define, ce.Eval_type,

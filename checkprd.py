@@ -1,10 +1,4 @@
-from proud.parser.parser_wrap import parse
-from proud.core_lang.basic_impl import Modular
-from proud.core_lang.modular_compiler import CompilerCtx, types
-from proud.core_lang.lowered_to_sexpr import resolve_type, SExprGen
 from proud.pybackend import PyBackEnd
-from hybridts import type_encoding as te, exc
-# from hybridts.tc_make import RigidStructureKeeper
 from argser import call
 from colorama import Fore, Style
 from traceback import format_exc

@@ -13,11 +13,11 @@ def make(cgc: CompilerGlobalContext):
     Typing = typing.cast(typing.Callable[[CompilerLocalContext], Interpreter], None)
     Quote = typing.cast(typing.Callable[[CompilerLocalContext], Interpreter], None)
 
-    def link_typing(**evaluators):
+    def link_typing(evaluators):
         nonlocal Typing
         Typing = evaluators['Typing']
 
-    def link_quote(**evaluators):
+    def link_quote(evaluators):
         nonlocal Quote
         Quote = evaluators['Quote']
 

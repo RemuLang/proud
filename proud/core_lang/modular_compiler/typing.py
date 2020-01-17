@@ -12,12 +12,9 @@ def make(cgc: CompilerGlobalContext):
 
     Express = typing.cast(typing.Callable[[CompilerLocalContext], Interpreter], None)
 
-    def link_express(**evaluators):
+    def link_express(evaluators):
         nonlocal Express
         Express = evaluators['Express']
-
-    def type_of_value(sym: Sym):
-        return tenv[sym]
 
     def type_of_type(sym: Sym) -> te.T:
         t = tc_state.infer(tenv[sym])
@@ -26,9 +23,6 @@ def make(cgc: CompilerGlobalContext):
         what_i_want = te.InternalVar(is_rigid=False)
         tc_state.unify(t, te.App(types.type_type, what_i_want))
         return what_i_want
-
-    def value_of_type(sym: Sym):
-        return tenv[sym]
 
     class Typing(Interpreter, ce.Eval_forall, ce.Eval_exist, ce.Eval_arrow, ce.Eval_imply,
                  ce.Eval_tuple, ce.Eval_record, ce.Eval_list, ce.Eval_loc, ce.Eval_call,
@@ -136,6 +130,7 @@ def make(cgc: CompilerGlobalContext):
             module.clc.location = location
             return module.eval(contents)
 
+    return Typing, [link_express]
 
 
 # class Typing(Evaluator, ce.Eval_forall, ce.Eval_exist, ce.Eval_arrow, ce.Eval_imply,
