@@ -1,0 +1,102 @@
+runtime operator
+filename "example_code\\hkt.prd"
+line 1
+line 3
+line 3
+const #<.mylist from example_code\hkt.prd, line 3, col 6>#
+deref! mylist_140729692496240
+line 5
+line 5
+line 5
+const #0#
+deref! cons_140729692496272
+line 7
+line 7
+line 7
+const #0#
+deref! nil_140729692496304
+line 9
+line 9
+deref cons_140729692496272
+line 9
+const #2#
+call 1
+line 9
+line 9
+deref cons_140729692496272
+line 9
+const #1#
+call 1
+line 9
+deref nil_140729692496304
+call 1
+call 1
+store list1_140729692496336
+line 11
+line 13
+defun
+    filename "example_code\\hkt.prd"
+    free []
+    args [__140729692496368] {
+    line 13
+    const #'_'#
+    label pround.return
+    return
+}
+deref! functor_140729692496400
+line 15
+line 15
+line 15
+line 15
+const #0#
+tuple 1
+tuple 0
+tuple 2
+store list_functor_140729692496432
+line 16
+const #()#
+line 18
+line 18
+defun
+    filename "example_code\\hkt.prd"
+    free []
+    args [inst_140729692496464] {
+    line 18
+    line 18
+    defun
+        filename "example_code\\hkt.prd"
+        free [inst_140729692496464]
+        args [func_140729692496496] {
+        line 18
+        line 19
+        line 19
+        deref inst_140729692496464
+        const #0#
+        prj
+        const #0#
+        prj
+        line 19
+        load func_140729692496496
+        call 1
+        label pround.return
+        return
+    }
+    label pround.return
+    return
+}
+store map1_140729692496528
+line 21
+const #()#
+deref cons_140729692496272
+deref functor_140729692496400
+load list1_140729692496336
+load list_functor_140729692496432
+load map1_140729692496528
+deref mylist_140729692496240
+deref nil_140729692496304
+tuple 7
+tuple 0
+tuple 2
+print
+const #None#
+return

@@ -1,7 +1,6 @@
 from proud.core_lang.modular_compiler import CompilerGlobalContext
-from proud.core_lang.modular_compiler import module, expression, typing
-
-from proud.core_lang.modular_compiler import quotation
+from proud.core_lang.modular_compiler import module, expression, quotation
+import proud.core_lang.modular_compiler.typing as typing
 
 
 def make_compiler_evaluators(cgc: CompilerGlobalContext):

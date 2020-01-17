@@ -1,14 +1,16 @@
 from proud.core_lang import sexpr, lowered_ir as ir, composable_evaluator as ce, types
 from proud.core_lang.scope import Scope, Sym
-from proud.core_lang.polymorphisms import implicit_and_generalise, implicit_and_generalise_, resolve_instance_
-from hybridts import type_encoding as te
+from proud.core_lang.polymorphisms import implicit_and_generalise, implicit_and_generalise_, maybe_generalise, resolve_instance_
 from proud.core_lang.modular_compiler import *
+from proud import excs
+from hybridts import type_encoding as te
 import typing
 
 
 def make(cgc: CompilerGlobalContext):
     tc_state = cgc.tc_state
     tenv = cgc.tenv
+    backend = cgc.backend
 
     Typing = typing.cast(typing.Callable[[CompilerLocalContext], Interpreter], None)
     Quote = typing.cast(typing.Callable[[CompilerLocalContext], Interpreter], None)
@@ -24,17 +26,19 @@ def make(cgc: CompilerGlobalContext):
     def type_of_value(sym: Sym):
         return tenv[sym]
 
-    class Express(Interpreter, ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
-                  ce.Eval_binary, ce.Eval_list, ce.Eval_tuple, ce.Eval_record,
-                  ce.Eval_call, ce.Eval_attr, ce.Eval_quote, ce.Eval_loc, ce.Eval_coerce,
-                  ce.Eval_literal, ce.Eval_type, ce.Eval_extern, ce.Eval_ite):
+    class Express(Interpreter, ce.Eval_let, ce.Eval_lam, ce.Eval_annotate, ce.Eval_tuple,
+                  ce.Eval_record, ce.Eval_call, ce.Eval_attr, ce.Eval_quote, ce.Eval_loc,
+                  ce.Eval_coerce, ce.Eval_literal, ce.Eval_type, ce.Eval_extern,
+                  ce.Eval_ite, ce.Eval_tellme):
 
         def eval_with_polymorphisms_(self, x):
             clc = self.clc
             x: ir.Expr = self.eval(x)
+            escaped_tvs = te.ftv(tc_state.infer(x.type))
             implicit_and_generalise_(clc.scope,
                                      tc_state,
                                      x,
+                                     escaped_tvs=escaped_tvs,
                                      loc=clc.location,
                                      filename=clc.filename)
             return x
@@ -42,21 +46,28 @@ def make(cgc: CompilerGlobalContext):
         def eval_with_polymorphisms(self, x):
             clc = self.clc
             x: ir.Expr = self.eval(x)
+            escaped_tvs = te.ftv(tc_state.infer(x.type))
             after_unification = implicit_and_generalise(clc.scope,
                                                         tc_state,
                                                         x,
                                                         loc=clc.location,
                                                         filename=clc.filename)
-            return x, after_unification
+            return x, after_unification, escaped_tvs
 
         def eval_expr_with_polymorphisms(self, x: ir.Expr):
             clc = self.clc
+            escaped_tvs = te.ftv(tc_state.infer(x.type))
             after_unification = implicit_and_generalise(clc.scope,
                                                         tc_state,
                                                         x,
                                                         loc=clc.location,
                                                         filename=clc.filename)
-            return x, after_unification
+            return x, after_unification, escaped_tvs
+
+        def tellme(module, name, body, *, backend=backend):
+            sym = module.clc.scope.require(name)
+            backend.types_to_show.append((module.clc.location, module.clc.filename, sym))
+            return module.eval(body)
 
         def extern(module, foreign_code):
             clc = module.clc
@@ -65,16 +76,17 @@ def make(cgc: CompilerGlobalContext):
 
         def ite(module, cond, true_clause, else_clause):
 
-            cond, after_unif1 = module.eval_with_polymorphisms(cond)
+            cond, after_unif1, escape0 = module.eval_with_polymorphisms(cond)
             tc_state.unify(cond.type, types.bool_t)
-            after_unif1()
+            after_unif1(escaped_tvs=escape0)
 
-            tc, after_unif2 = module.eval_with_polymorphisms(true_clause)
-            ec, after_unif3 = module.eval_with_polymorphisms(else_clause)
+            tc, after_unif2, escape1 = module.eval_with_polymorphisms(true_clause)
+            ec, after_unif3, escape2 = module.eval_with_polymorphisms(else_clause)
 
             tc_state.unify(tc.type, ec.type)
-            after_unif2()
-            after_unif2()
+            escapes = escape1 | escape2
+            after_unif2(escaped_tvs=escapes)
+            after_unif2(escaped_tvs=escapes)
 
             return ir.Expr(expr=ir.ITE(cond, tc, ec), type=tc.type)
 
@@ -94,7 +106,7 @@ def make(cgc: CompilerGlobalContext):
                            type=types.Var(loc, module.clc.filename, name='coerce_var'))
 
         def attr(module, base, attr_name: str):
-            base, after_base_unif = module.eval_with_polymorphisms(base)
+            base, after_base_unif, escape = module.eval_with_polymorphisms(base)
             loc, filename = module.clc.location, module.clc.filename
             var = types.Var(loc=loc, filename=filename, name=attr_name + ".getter")
             tho = types.Var(loc=loc, filename=filename, name=attr_name + ".tho")
@@ -103,13 +115,12 @@ def make(cgc: CompilerGlobalContext):
             # TODO: how to deal with a polymorphic record value?
             # e.g., forall a. {x : a}
             tc_state.unify(record_type, base.type)
-            after_base_unif()
-
+            after_base_unif(escaped_tvs=escape)
+            var = maybe_generalise(tc_state.infer(var))
             return ir.Expr(expr=ir.Field(base=base, attr=attr_name), type=var)
 
         def record(module, pairs, row):
             kv = []
-
             for each in pairs:
                 loc, (attr_name, expr) = sexpr.unloc(each)
                 expr = module.eval_with_polymorphisms_(expr)
@@ -117,18 +128,36 @@ def make(cgc: CompilerGlobalContext):
 
             kv.sort(key=lambda tp: tp[0])
             elts = [elt for _, elt in kv]
-            mono = te.Record(te.row_from_list([(k, v.type) for k, v in kv], te.empty_row))
             left = ir.Tuple(elts)
 
             if not row:
+                fields = []
+                for k, v in kv:
+                    v_type = tc_state.infer(v.type)
+                    if isinstance(v_type, te.Forall):
+                        v_type = v_type.poly_type
+                    fields.append((k, v_type))
+
+                mono = te.Record(te.row_from_list(fields, te.empty_row))
+                mono = maybe_generalise(mono)
                 left = ir.Expr(expr=ir.Tuple([anyway(left),
                                               anyway(ir.Tuple([]))]),
                                type=mono)
                 return left
 
             right = module.eval_with_polymorphisms_(row)
-            my_type = te.Record(
-                te.row_from_list([(k, v.type) for k, v in kv], te.RowPoly(right.type)))
+            fields = []
+            for k, v in kv:
+                v_type = tc_state.infer(v.type)
+                if isinstance(v_type, te.Forall):
+                    v_type = v_type.poly_type
+                fields.append((k, v_type))
+            row_type = tc_state.infer(right.type)
+            if isinstance(row_type, te.Forall):
+                row_type = row_type.poly_type
+            my_type = tc_state.infer(
+                te.Record(te.row_from_list(fields, te.RowPoly(row_type))))
+            my_type = maybe_generalise(tc_state.infer(my_type))
             return ir.Expr(expr=ir.Merge(left=anyway(left), right=right), type=my_type)
 
         def tuple(module, elts):
@@ -138,14 +167,23 @@ def make(cgc: CompilerGlobalContext):
                 return module.eval_with_polymorphisms_(elts[0])
 
             elts = list(map(module.eval_with_polymorphisms_, elts))
+            eltypes = []
+            for elt in elts:
+                eltype = tc_state.infer(elt.type)
+                if isinstance(eltype, te.Forall):
+                    eltype = eltype.poly_type
+                eltypes.append(eltype)
+
             return ir.Expr(expr=ir.Tuple(elts),
-                           type=te.Tuple(tuple(e.type for e in elts)))
+                           type=maybe_generalise(te.Tuple(tuple(eltypes))))
 
         def annotate(module, var, type):
-            var, after_unif = module.eval_with_polymorphisms(var)
-            type = Typing(module.clc).eval(type)
+            var, after_unif, escaped = module.eval_with_polymorphisms(var)
+            type = tc_state.infer(Typing(module.clc).eval(type))
+            escaped |= te.ftv(type)
+            _, type = tc_state.inst_without_structure_preserved(type, rigid=True)
             tc_state.unify(var.type, type)
-            after_unif()
+            after_unif(escaped_tvs=escaped)
             return var
 
         def loc(module, location, contents):
@@ -155,11 +193,12 @@ def make(cgc: CompilerGlobalContext):
 
         def call(module, f, arg):
             clc = module.clc
+            f = module.eval(f)
+            f.type = tc_state.infer(f.type)
 
-            exp_f = module.eval(f)
             to_mono = None
             to_poly = None
-            func_type = exp_f.type
+            func_type = f.type
 
             # row polymorphisms
             while isinstance(func_type, te.Implicit):
@@ -169,17 +208,22 @@ def make(cgc: CompilerGlobalContext):
                 to_mono = func_type.ret
                 to_poly = func_type.arg
 
-            _, f.type = tc_state.inst_without_structure_preserved(f.type, rigid=True)
+            escaped = te.ftv(f.type)
+            _, f.type = tc_state.inst_without_structure_preserved(f.type)
             resolve_instance_(clc.scope, f)
 
-            arg, after_arg_unif = module.eval_with_polymorphisms(arg)
+            arg, after_arg_unif, escaped_in_arg = module.eval_with_polymorphisms(arg)
+            escaped |= escaped_in_arg
+
             ret_t = types.Var(loc=clc.location, filename=clc.filename, name="ret")
 
             inst_arrow = te.Arrow(arg.type, ret_t)
             tc_state.unify(inst_arrow, f.type)
 
-            ret_t, = after_arg_unif(ret_t, )
+            ret_t, = after_arg_unif(ret_t, escaped_tvs=escaped)
 
+            arg.type = tc_state.infer(arg.type)
+            ret_t = maybe_generalise(ret_t)
             if to_poly:
                 arg = ir.Expr(type=arg.type,
                               expr=ir.Polymorphization(layout_type=to_poly, expr=arg))
@@ -201,18 +245,27 @@ def make(cgc: CompilerGlobalContext):
             with clc.resume_scope():
                 clc.scope = sub_scope
                 sym_arg = sub_scope.enter(name)
+                escaped = set()
                 if type:
                     type_arg = tc_state.infer(Typing(clc).eval(type))
+                    escaped |= te.ftv(type_arg)
+                    non_escaped = ()
                 else:
                     type_arg = types.Var(loc, filename, name=name + '\'t')
+                    non_escaped = [type_arg]
 
                 tenv[sym_arg] = type_arg
-                ret = module.eval(ret)
+                ret, after_ret_unif, ret_escaped = module.eval_with_polymorphisms(ret)
+                escaped |= ret_escaped
+
                 type_arg = tc_state.infer(type_arg)
-                arrow_type = te.Arrow(type_arg, ret.type)
+                ret.type = tc_state.infer(ret.type)
+                lam_type = te.Arrow(type_arg, ret.type)
+                after_ret_unif(escaped_tvs=escaped, non_escaped_tvs=non_escaped)
+                lam_type = maybe_generalise(tc_state.infer(lam_type))
                 name = "{} |{}|".format(path, name)
                 sym_arg = ir.Fun(name, filename, sym_arg, ret)
-                return ir.Expr(type=arrow_type, expr=sym_arg)
+                return ir.Expr(type=lam_type, expr=sym_arg)
 
         def let(module, is_rec, seq, body):
             clc = module.clc
@@ -229,14 +282,13 @@ def make(cgc: CompilerGlobalContext):
                         else:
                             tenv[sym_bind] = types.Var(loc, filename, name=name)
 
-                unifications = []
                 block = []
 
+                closures = []
                 for loc, name, annotation, bound in seq:
                     _, name = sexpr.unloc(name)
                     with clc.resume_scope():
-                        sub_scope = clc.scope = scope.sub_scope()
-
+                        clc.scope = scope.sub_scope()
                         if is_rec:
                             sym_bind = scope.require(name)
                             t1 = tenv[sym_bind]
@@ -245,21 +297,41 @@ def make(cgc: CompilerGlobalContext):
                             t1 = Typing(clc).eval(annotation)
                             tenv[sym_bind] = t1
                         else:
-                            sym_bind = sub_scope.enter(name)
+                            sym_bind = scope.enter(name)
                             t1 = types.Var(loc, filename, name=name)
                             tenv[sym_bind] = t1
 
                         t1 = tc_state.infer(t1)
-                        _, t1_inst = tc_state.inst_without_structure_preserved(t1,
-                                                                               rigid=True)
-                        bound, after_bound_unif = module.eval_with_polymorphisms(bound)
+                        if annotation:
+                            escaped = te.ftv(t1)
+                            _, t1_inst = tc_state.inst_without_structure_preserved(
+                                t1, rigid=True)
+                        else:
+                            escaped = set()
+                            t1_inst = t1
+
+                        bound, after_bound_unif, bound_esc = module.eval_with_polymorphisms(
+                            bound)
+                        escaped |= bound_esc
+
                         t2_inst = bound.type
                         tc_state.unify(t1_inst, t2_inst)
-                        unifications.append(after_bound_unif)
-                        block.append(ignore(ir.Set(sym_bind, bound)))
 
-                for unif in unifications:
-                    unif()
+                        def closure(new_escaped,
+                                    *,
+                                    annotation=annotation,
+                                    after_bound_unif=after_bound_unif,
+                                    escaped=escaped,
+                                    sym_bind=sym_bind,
+                                    t1=t1):
+
+                            after_bound_unif(escaped_tvs=new_escaped | escaped)
+
+                            if not annotation:
+                                tenv[sym_bind] = maybe_generalise(tc_state.infer(t1))
+
+                        closures.append(closure)
+                        block.append(ignore(ir.Set(sym_bind, bound)))
 
                 body = module.eval(body)
                 block.append(body)
@@ -273,14 +345,19 @@ def make(cgc: CompilerGlobalContext):
             return ir.Expr(type=my_type, expr=var)
 
         def eval(self, x) -> ir.Expr:
-            if sexpr.is_ast(x):
-                hd, *args = x
-                return ce.dispatcher[hd](*args)(self)
+            try:
+                if sexpr.is_ast(x):
+                    hd, *args = x
+                    return ce.dispatcher[hd](*args)(self)
 
-            if isinstance(x, str):
-                return self.eval_sym(x)
+                if isinstance(x, str):
+                    return self.eval_sym(x)
 
-            raise TypeError(x)
+                raise TypeError(x)
+            except excs.StaticCheckingFailed:
+                raise
+            except Exception as e:
+                raise excs.StaticCheckingFailed(e, self.clc)
 
         def quote(module, contents):
             clc = module.clc
@@ -314,6 +391,7 @@ def make(cgc: CompilerGlobalContext):
             return ir.Expr(expr=ret_expr, type=te.Forall(rho_group, (rho, ), ret_type))
 
     return Express, [link_quote, link_typing]
+
 
 # class Express(Evaluator, ce.Eval_let, ce.Eval_lam, ce.Eval_match, ce.Eval_annotate,
 #               ce.Eval_binary, ce.Eval_list, ce.Eval_tuple, ce.Eval_record, ce.Eval_call,

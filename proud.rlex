@@ -46,6 +46,7 @@ W \s+
 %require uncall_k
 %require alias_k
 %require attr_k
+%require tellme_k
 
 %require loc_
 %require loc

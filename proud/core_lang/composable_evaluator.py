@@ -435,6 +435,19 @@ def imp(qualname):
 dispatcher[import_k] = imp
 
 
+class Eval_tellme(Protocol):
+    @abc.abstractmethod
+    def tellme(module, name, body):
+        ...
+
+
+def tellme(name, body):
+    return lambda module: module.tellme(name, body)
+
+
+dispatcher[tellme_k] = tellme
+
+
 class Eval_set(Protocol):
     @abc.abstractmethod
     def set(module, sym, expr):

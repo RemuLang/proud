@@ -92,13 +92,15 @@ def make(cgc: CompilerGlobalContext):
             clc = module.clc
             forall_scope = types.ForallScope(clc.location, clc.filename)
             fresh_vars = []
-            for n in unbound_fresh_decls:
-                _, n = sexpr.unloc(n)
-                var = clc.scope.enter(n)
-                fresh_var = te.Fresh(n, forall_scope)
-                fresh_vars.append(fresh_var)
-                tenv[var] = te.App(types.type_type, fresh_var)
-            return te.Forall(forall_scope, tuple(fresh_vars), module.eval(polytype))
+            with clc.resume_scope():
+                clc.scope = sub_scope = clc.scope.sub_scope()
+                for n in unbound_fresh_decls:
+                    _, n = sexpr.unloc(n)
+                    var = sub_scope.enter(n)
+                    fresh_var = te.Fresh(n, forall_scope)
+                    fresh_vars.append(fresh_var)
+                    tenv[var] = te.App(types.type_type, fresh_var)
+                return te.Forall(forall_scope, tuple(fresh_vars), module.eval(polytype))
 
         def exist(module, bound_vars: tuple, monotype):
             bound_vars_ = set(bound_vars)
@@ -116,15 +118,20 @@ def make(cgc: CompilerGlobalContext):
             return module.eval(monotype)
 
         def eval(self, x):
-            if isinstance(x, str):
-                return type_of_type(self.clc.scope.require(x))
-            if sexpr.is_ast(x):
-                hd, *args = x
-                if hd is sexpr.attr_k:
-                    return self.type(None, x)
-                return ce.dispatcher[hd](*args)(self)
+            try:
+                if isinstance(x, str):
+                    return type_of_type(self.clc.scope.require(x))
+                if sexpr.is_ast(x):
+                    hd, *args = x
+                    if hd is sexpr.attr_k:
+                        return self.type(None, x)
+                    return ce.dispatcher[hd](*args)(self)
 
-            raise ValueError(x)
+                raise ValueError(x)
+            except excs.StaticCheckingFailed:
+                raise
+            except Exception as e:
+                raise excs.StaticCheckingFailed(e, self.clc)
 
         def loc(module, location, contents):
             module.clc.location = location

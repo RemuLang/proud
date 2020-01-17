@@ -1,0 +1,56 @@
+runtime operator
+filename "example_code\\code-from-mlf.prd"
+line 1
+line 2
+line 2
+defun
+    filename "example_code\\code-from-mlf.prd"
+    free []
+    args [x_140729692496240] {
+    line 2
+    line 2
+    load x_140729692496240
+    label pround.return
+    return
+}
+deref! auto_140729692496272
+line 3
+line 3
+defun
+    filename "example_code\\code-from-mlf.prd"
+    free []
+    args [x_140729692496304] {
+    line 3
+    line 3
+    defun
+        filename "example_code\\code-from-mlf.prd"
+        free [x_140729692496304]
+        args [y_140729692496336] {
+        line 3
+        line 3
+        deref x_140729692496304
+        label pround.return
+        return
+    }
+    label pround.return
+    return
+}
+deref! choose_140729692496368
+line 4
+line 4
+deref choose_140729692496368
+line 4
+deref auto_140729692496272
+call 1
+store res_140729692496400
+line 6
+const #()#
+deref auto_140729692496272
+deref choose_140729692496368
+load res_140729692496400
+tuple 3
+tuple 0
+tuple 2
+print
+const #None#
+return

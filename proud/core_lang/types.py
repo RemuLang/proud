@@ -77,7 +77,7 @@ def fresh(n: str):
     return te.UnboundFresh(n)
 
 
-type_type = Nom("value")
+type_type = Nom("type")
 anyway_type = Nom("anyway(shouldn't be awared by user!)")
 int_t = Nom("int")
 string_t = Nom("string")

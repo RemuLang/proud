@@ -15,6 +15,12 @@ def check_normalized(seq):
     return True
 
 
+def _unforall(x: te.Forall):
+    while isinstance(x, te.Forall):
+        x = x.poly_type
+    return x
+
+
 def rec_polymorphize(require: te.T, actual: te.T):
     """
     Layout := Tuple (Layout, ...)
@@ -26,8 +32,7 @@ def rec_polymorphize(require: te.T, actual: te.T):
         assert isinstance(actual, te.Tuple)
 
         ret = tuple(
-            rec_polymorphize(req, act)
-            for req, act in zip(require.elts, actual.elts))
+            rec_polymorphize(req, act) for req, act in zip(require.elts, actual.elts))
         if all(e is None for e in ret):
             return None
         return ret
@@ -41,20 +46,20 @@ def rec_polymorphize(require: te.T, actual: te.T):
         ret = []
         for i, f in enumerate(require_fields):
             ret.append((actual_fields.pop(f),
-                        rec_polymorphize(require_field_ts[f],
-                                         actual_field_ts[f])))
+                        rec_polymorphize(require_field_ts[f], actual_field_ts[f])))
         if check_normalized(ret) and not actual_fields:
             # final[i] = have[ret[i]]
             return None
 
-        tl = tuple(
-            i for _, i in sorted(actual_fields.items(), key=lambda x: x[1]))
+        tl = tuple(i for _, i in sorted(actual_fields.items(), key=lambda x: x[1]))
 
         return [tuple(ret), tl]
     return None
 
 
 def polymorphize(require: te.T, actual: te.T):
+    require = _unforall(require)
+    actual = _unforall(actual)
     if not isinstance(require, (te.Tuple, te.Record)):
         return
     if not isinstance(actual, (te.Tuple, te.Record)):
@@ -66,8 +71,7 @@ def rec_monomorphize(require: te.T, actual: te.T):
     if isinstance(actual, te.Tuple):
         assert isinstance(require, te.Tuple)
         ret = tuple(
-            rec_monomorphize(req, act)
-            for req, act in zip(require.elts, actual.elts))
+            rec_monomorphize(req, act) for req, act in zip(require.elts, actual.elts))
         if all(e is None for e in ret):
             return
         return ret
@@ -83,8 +87,7 @@ def rec_monomorphize(require: te.T, actual: te.T):
         for i, f in enumerate(actual_fields):
             # final[ret[i]] = have[i]
             hd.append((require_fields.pop(f),
-                       rec_monomorphize(require_field_ts[f],
-                                        actual_field_ts[f])))
+                       rec_monomorphize(require_field_ts[f], actual_field_ts[f])))
         if check_normalized(hd) and not require_fields:
             return None
 
@@ -95,6 +98,8 @@ def rec_monomorphize(require: te.T, actual: te.T):
 
 
 def monomorphize(require: te.T, actual: te.T):
+    require = _unforall(require)
+    actual = _unforall(actual)
     if not isinstance(require, (te.Tuple, te.Record)):
         return
     if not isinstance(actual, (te.Tuple, te.Record)):

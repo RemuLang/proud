@@ -8,17 +8,27 @@ let nil : forall a. mylist a = coerce 0
 
 let list1 = cons 2 (cons 1 nil)
 
-let functor : forall f . value f -> value {map : forall u1 u2.(u1 -> u2) -> f u1 -> f u2} =
-    | _ | -> val exist _'. _'
+let functor : forall f.
+              value f -> value ({map : forall u1 u2. (u1 -> u2) -> f u1 -> f u2}) =
+    fun _  -> typeval exist _'. _'
 
-let list_functor : val functor list = coerce 0
-let polymap : forall f . (val functor f) -> forall a b. (a -> b) -> f a -> f b =
-        | inst | -> inst.map
+let list_functor : valtype functor list = {map = coerce 0}
+tellme list_functor
 
-let ret = polymap list_functor
+let map1 = | inst | -> | func | ->
+    inst.map func
 
+tellme map1
+# let polymap : forall f. (valtype functor f) -> forall a b. (a -> b) -> f a -> f b =
+#    | inst | -> | func | -> | data | -> inst.map func data
+# let polymap : forall f a b. (valtype functor f) -> (a -> b) -> f a -> f b =
+#    | inst | -> | func | -> | data | -> inst.map func data
 
-let monomap : forall f x y. (val functor f) -> (x -> y) -> f x -> f y =
-        | inst: (val functor f) | -> | func | -> | data | -> inst.map func data
+# tellme polymap
+# tellme list_functor
+# let ret = polymap list_functor
 
-let ret' = monomap list_functor
+# let monomap : forall f. (valtype functor f) -> exist _ . _ =
+#        | inst: {map : forall f. valtype functor f } | -> coerce 0
+
+# let ret' = monomap list_functor

@@ -198,6 +198,7 @@ class CodeGen(ce.Eval_set, ce.Eval_func, ce.Eval_invoke, ce.Eval_loc,
             module("| _ => {}".format(default))
 
     def feed_code(self):
+        self.code.append('print')
         self.code.append('const #None#')
         self.code.append('return')
         return '\n'.join(self.code)

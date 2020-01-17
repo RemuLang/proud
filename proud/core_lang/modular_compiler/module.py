@@ -1,11 +1,14 @@
-from proud.core_lang import sexpr, lowered_ir as ir, composable_evaluator as ce, types
+from proud import excs
+from proud.core_lang import sexpr
+from proud.core_lang import lowered_ir as ir
+from proud.core_lang import composable_evaluator as ce
+from proud.core_lang import types
 from proud.core_lang.scope import Sym
 from proud.core_lang.modular_compiler import *
-from proud.core_lang.polymorphisms import implicit_and_generalise
+from proud.core_lang.polymorphisms import implicit_and_generalise, maybe_generalise
 from proud.parser.parser_wrap import parse
 from hybridts import type_encoding as te
 import typing
-
 
 
 def _sort_sym(expr: ir.Expr):
@@ -33,12 +36,17 @@ def make(cgc: CompilerGlobalContext):
         return tenv[sym]
 
     class Modular(Interpreter, ce.Eval_module, ce.Eval_loc, ce.Eval_define, ce.Eval_type,
-                  ce.Eval_imp):
+                  ce.Eval_imp, ce.Eval_tellme):
 
         def eval(self, x) -> ir.Expr:
-            assert sexpr.is_ast(x)
-            hd, *args = x
-            return ce.dispatcher[hd](*args)(self)
+            try:
+                assert sexpr.is_ast(x)
+                hd, *args = x
+                return ce.dispatcher[hd](*args)(self)
+            except excs.StaticCheckingFailed:
+                raise
+            except Exception as e:
+                raise excs.StaticCheckingFailed(e, self.clc)
 
         def imp(module, qualname: typing.List[str], *, backend=backend):
             clc = module.clc
@@ -87,6 +95,11 @@ def make(cgc: CompilerGlobalContext):
             module.clc.location = location
             exp = module.eval(contents)
             return wrap_loc(location, exp)
+
+        def tellme(self, name, _):
+            sym = self.clc.scope.require(name)
+            backend.types_to_show.append((self.clc.location, self.clc.filename, sym))
+            return ignore(ir.Const(()))
 
         def module(module_eval, is_rec, name, stmts, loc=None):
             loc, name = sexpr.unloc(name)
@@ -140,7 +153,7 @@ def make(cgc: CompilerGlobalContext):
             for stmt in filter_stmts:
                 inner_stmts.append(module_eval.eval(stmt))
 
-            syms = scope.get_newest_bounds()
+            syms = [sym for sym in scope.get_newest_bounds() if sym is not sym_mod]
 
             row_mod = te.row_from_list([(s.name, tenv[s]) for s in syms], te.empty_row)
             if type_mod:
@@ -187,29 +200,38 @@ def make(cgc: CompilerGlobalContext):
                 if annotated:
                     t1 = Typing(clc).eval(annotated)
                     tc_state.unify(name_var, t1)
+                    t1 = tc_state.infer(t1)
+                    escaped_tvs = te.ftv(t1)
+                    TV1, t1_inst = tc_state.inst_without_structure_preserved(t1,
+                                                                             rigid=True)
                 else:
-                    t1 = name_var
-
-                t1 = tc_state.infer(t1)
-                _, t1_inst = tc_state.inst_without_structure_preserved(t1, rigid=True)
+                    escaped_tvs = set()
+                    t1_inst = tc_state.infer(name_var)
 
                 bound: ir.Expr = module.eval(bound)
+                bound.type = tc_state.infer(bound.type)
+                escaped_tvs |= te.ftv(bound.type)
+
                 # type classes & generalised values & first class polymorphisms
-                after_unification = implicit_and_generalise(
-                        scope, tc_state, bound,
-                        loc=loc, filename=clc.filename
-                )
+                after_unification = implicit_and_generalise(scope,
+                                                            tc_state,
+                                                            bound,
+                                                            loc=loc,
+                                                            filename=clc.filename)
                 t2_inst = bound.type
 
                 tc_state.unify(t1_inst, t2_inst)
 
                 # both implicit arguments and generalising got resolved here
-                after_unification()
-
+                after_unification(escaped_tvs=escaped_tvs)
+                bound.type = tc_state.infer(bound.type)
+                name_var = tc_state.infer(name_var)
+                tenv[sym_def] = maybe_generalise(name_var)
                 exp_def = ir.Set(sym_def, bound)
                 return ignore(exp_def)
 
     return Modular, [link_express, link_typing]
+
 
 # class Modular(Evaluator, ce.Eval_module, ce.Eval_loc, ce.Eval_define, ce.Eval_type,
 #               ce.Eval_imp):

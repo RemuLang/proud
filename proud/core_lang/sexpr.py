@@ -48,6 +48,7 @@ mutual_k = ASTTag("mutual", ['cases', 'expr'])
 extern_k = ASTTag("extern", ["foreign_code"])
 ite_k = ASTTag("ite", ["cond", "true_clause", "else_clause"])
 import_k = ASTTag("imp", ["qualname"])
+tellme_k = ASTTag("tellme", ['name', 'body'])
 
 
 def unloc(e):

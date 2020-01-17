@@ -9,6 +9,8 @@ def check_code(filename):
     end = PyBackEnd()
     # try:
     end.main(filename, filename + '.sij')
+
+
     # except Exception as e:
     #     print(e)
     #     pass

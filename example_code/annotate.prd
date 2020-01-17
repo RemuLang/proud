@@ -1,2 +1,15 @@
-module MyMod
-let test : exist a. a = coerce 0 : string
+module rec MyMod
+let test : exist a. a = "123"
+let print : forall a. a -> unit = extern "print"
+let eqi : int -> int -> bool = extern "eq"
+
+let lam1 = fun x -> (x, x)
+tellme lam1
+
+let outer_func = eqi 1
+let lam2 = fun x -> outer_func x
+
+tellme outer_func
+tellme lam2
+
+

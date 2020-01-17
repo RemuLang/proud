@@ -1,0 +1,75 @@
+runtime operator
+filename "example_code\\annotate.prd"
+line 1
+const #()#
+store MyMod_140729692496240
+line 2
+line 2
+const #'123'#
+store test_140729692496272
+line 3
+line 3
+const #print#
+store print_140729692496304
+line 4
+line 4
+const #eq#
+deref! eqi_140729692496336
+line 6
+line 6
+defun
+    filename "example_code\\annotate.prd"
+    free []
+    args [x_140729692496368] {
+    line 6
+    line 6
+    load x_140729692496368
+    line 6
+    load x_140729692496368
+    tuple 2
+    label pround.return
+    return
+}
+store lam1_140729692496400
+line 7
+const #()#
+line 9
+line 9
+deref eqi_140729692496336
+line 9
+const #1#
+call 1
+deref! outer_func_140729692496432
+line 10
+line 10
+defun
+    filename "example_code\\annotate.prd"
+    free [outer_func_140729692496432]
+    args [x_140729692496464] {
+    line 10
+    deref outer_func_140729692496432
+    line 10
+    load x_140729692496464
+    call 1
+    label pround.return
+    return
+}
+store lam2_140729692496496
+line 12
+const #()#
+line 13
+const #()#
+deref eqi_140729692496336
+load lam1_140729692496400
+load lam2_140729692496496
+deref outer_func_140729692496432
+load print_140729692496304
+load test_140729692496272
+tuple 6
+tuple 0
+tuple 2
+store MyMod_140729692496240
+load MyMod_140729692496240
+print
+const #None#
+return
