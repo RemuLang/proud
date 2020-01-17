@@ -90,7 +90,7 @@ def anyway(x: ir.BaseExpr):
 
 
 def wrap_loc(loc: Location, expr: ir.Expr):
-    return ignore(ir.WrapLoc(loc, expr))
+    return ir.Expr(type=expr.type, expr=ir.WrapLoc(loc, expr))
 
 
 unit = ir.Expr(type=types.unit_t, expr=ir.Const(()))

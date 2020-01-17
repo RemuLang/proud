@@ -38,6 +38,7 @@ def resolve_instance_(scope: Scope, expr: ir.Expr):
 def generalise(tc_state: TCState,
                TV: typing.List[te.Var],
                type: te.T,
+               others: typing.Iterable[te.T],
                loc=None,
                filename=None):
     forall = types.ForallScope(loc, filename)
@@ -63,21 +64,24 @@ def generalise(tc_state: TCState,
         type = tc_state.infer(type)
         assure_not_generalised_record_value(type)
         type = te.Forall(forall, bounds, type)
-    return type
+        others = [te.Forall(forall, bounds, other) for other in others]
+        return type, others
+    return type, others
 
 
-def _do_nothing():
-    return
+def _do_nothing(*xs):
+    return xs
 
 
 def implicit_and_generalise(scope: Scope,
                             tc_state: TCState,
                             expr: ir.Expr,
                             loc=None,
-                            filename=None):
+                            filename=None,
+                            rigid=False):
     expr_type = tc_state.infer(expr.type)
 
-    TV, expr_type = tc_state.inst_without_structure_preserved(expr_type)
+    TV, expr_type = tc_state.inst_without_structure_preserved(expr_type, rigid=rigid)
     expr.type = expr_type
     if not TV:
         # don't have to generalise
@@ -86,11 +90,35 @@ def implicit_and_generalise(scope: Scope,
 
     resolve_instance_(scope, expr)
 
-    def after_unification():
-        expr.type = generalise(tc_state,
-                               list(TV.values()),
-                               expr.type,
-                               loc=loc,
-                               filename=filename)
+    def after_unification(*xs):
+        expr.type, others = generalise(tc_state,
+                                       list(TV.values()),
+                                       expr.type,
+                                       xs,
+                                       loc=loc,
+                                       filename=filename)
+        return others
 
     return after_unification
+
+
+def implicit_and_generalise_(scope: Scope,
+                             tc_state: TCState,
+                             expr: ir.Expr,
+                             loc=None,
+                             filename=None):
+    expr_type = tc_state.infer(expr.type)
+
+    TV, expr_type = tc_state.inst_without_structure_preserved(expr_type)
+    expr.type = expr_type
+    if not TV:
+        # don't have to generalise
+        resolve_instance_(scope, expr)
+        return
+
+    resolve_instance_(scope, expr)
+    expr.type = generalise(tc_state,
+                           list(TV.values()),
+                           expr.type, [],
+                           loc=loc,
+                           filename=filename)
