@@ -1,24 +1,23 @@
 # Proud Programming Language
 
-Hope we can see a to-Python compiler in one day :)
  
 ## Feature
 
-- Row polymorphisms(Extensible Records)! 
+- [Row polymorphisms](https://en.wikipedia.org/wiki/Row_polymorphism)(Extensible Records)! 
 - First class polymorphisms!
 - Type classes/traits!
 - Modules as records!
 - Type holes(use `exist a. a` to create a scoped type variable for completing types for you)
 - Implicit inference(only first class polymorphisms need manually annotations)
-- Customizing operators' precedence and associativity(it's safe, because if you don't have to open a module globally), by [Remu-Operator](https://github.com/RemuLang/remu-operator).
+- Customizing operators' precedences and associativities(it's safe, because you don't have to open a module globally), by [Remu-Operator](https://github.com/RemuLang/remu-operator).
 
 ## Overview
 
-Currently, the strong type system is finished.
+Currently, a core language is implemented, with a code generation interface and implementation in Python.
 
-A core language is finished, with a code generation interface and implementation in Python.
+Pattern matching and implicit argumrnts are WIP, and I'm planning to bootstrap them with proud itself.
 
-`example_code/hello_world.prd`:
+Hello-world example: `example_code/hello_world.prd`:
 
 ```ocaml
 module HW
@@ -34,8 +33,8 @@ let _ = hello_world {name = "thautwarm", age = 18, sex = 0.5 }
 # quotation and splicing
 let var = "b"
 let code = `(print ($add x $var))
-let int_print : string -> unit = print
-let runcode = code {x = "n", print = int_print}
+let str_print : string -> unit = print
+let runcode = code {x = "n", print = str_print}
 ``` 
 
 To run this file:
