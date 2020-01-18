@@ -2,10 +2,12 @@ module Auto
 let zz : forall a. a -> unit = extern "print"
 let eq : forall a. a -> a -> bool = coerce 0
 
-let f1 : forall a. a -> exist _. _ = coerce 0
-# let f2 : forall a. a -> a = coerce 0
+let f1 : forall a. a -> (a, exist _. _) = fun a -> (a, a)
+tellme f1
 
-# let _ = eq f1 f2
+let f2 : forall a. a -> (a, a) = coerce 0
 
-# tellme f1
+let _ = eq f1 f2
+
+tellme _
 

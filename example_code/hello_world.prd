@@ -11,7 +11,9 @@ let _ = hello_world {name = "thautwarm", age = 18, sex = 0.5 }
 # quotation and splicing
 let var = "b"
 let code = `(print ($add x $var))
+tellme code
 let row = {x = "n", print = print}
+
 let z = (fun x -> x,  fun y -> (2, y))
 let runcode = code {x = "n", print = print}
 tellme z
@@ -27,3 +29,5 @@ let x =
     tellme z in
     tellme runcode in
     runcode
+
+tellme x

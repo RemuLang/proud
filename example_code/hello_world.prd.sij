@@ -4,28 +4,28 @@ line 1
 line 4
 line 4
 const #print#
-deref! print_140729692496240
+deref! print_140737219109232
 line 5
 line 5
 const #lambda a: lambda b: add(a, b)#
-deref! add_140729692496272
+deref! add_140737219109264
 line 6
 line 6
 defun
     filename "example_code\\hello_world.prd"
-    free [add_140729692496272 print_140729692496240]
-    args [r_140729692496304] {
+    free [add_140737219109264 print_140737219109232]
+    args [r_140737219109296] {
     line 7
-    deref print_140729692496240
+    deref print_140737219109232
     line 7
     line 7
-    deref add_140729692496272
+    deref add_140737219109264
     line 7
     const #'hello '#
     call 1
     line 7
     line 7
-    load r_140729692496304
+    load r_140737219109296
     const #0#
     prj
     const #0#
@@ -35,10 +35,10 @@ defun
     label pround.return
     return
 }
-deref! hello_world_140729692496336
+deref! hello_world_140737219109328
 line 9
 line 9
-deref hello_world_140729692496336
+deref hello_world_140737219109328
 line 9
 line 9
 const #18#
@@ -50,214 +50,218 @@ tuple 3
 tuple 0
 tuple 2
 call 1
-store __140729692496368
+store __140737219109360
 line 12
 line 12
 const #'b'#
-deref! var_140729692496400
+deref! var_140737219109392
 line 13
 line 13
 defun
     filename "example_code\\hello_world.prd"
-    free [add_140729692496272 var_140729692496400]
-    args [.external_140729692496432] {
-    load .external_140729692496432
+    free [add_140737219109264 var_140737219109392]
+    args [.external_140737219109424] {
+    load .external_140737219109424
     const #0#
     prj
     const #0#
     prj
-    store print_140729692496464
-    load .external_140729692496432
+    store print_140737219109456
+    load .external_140737219109424
     const #0#
     prj
     const #1#
     prj
-    store x_140729692496496
+    store x_140737219109488
     line 13
     line 13
-    load print_140729692496464
+    load print_140737219109456
     line 13
     line 13
     line 13
-    deref add_140729692496272
+    deref add_140737219109264
     line 13
-    load x_140729692496496
+    load x_140737219109488
     call 1
     line 13
     line 13
-    deref var_140729692496400
+    deref var_140737219109392
     call 1
     call 1
     label pround.return
     return
 }
-deref! code_140729692496528
+deref! code_140737219109520
 line 14
-line 14
-line 14
-deref print_140729692496240
-line 14
-const #'n'#
-tuple 2
-tuple 0
-tuple 2
-store row_140729692496560
-line 15
-line 15
-line 15
-defun
-    filename "example_code\\hello_world.prd"
-    free []
-    args [x_140729692496592] {
-    line 15
-    load x_140729692496592
-    label pround.return
-    return
-}
-line 15
-defun
-    filename "example_code\\hello_world.prd"
-    free []
-    args [y_140729692496624] {
-    line 15
-    line 15
-    const #2#
-    line 15
-    load y_140729692496624
-    tuple 2
-    label pround.return
-    return
-}
-tuple 2
-store z_140729692496656
-line 16
-line 16
-deref code_140729692496528
-line 16
-line 16
-deref print_140729692496240
-line 16
-const #'n'#
-tuple 2
-tuple 0
-tuple 2
-call 1
-store runcode_140729692496688
-line 17
 const #()#
-line 19
-line 20
-line 20
-deref print_140729692496240
-store y_140729692496720
-line 21
-line 21
-const #'b'#
-deref! var_140729692496752
-line 22
-line 22
-defun
-    filename "example_code\\hello_world.prd"
-    free [add_140729692496272 var_140729692496752]
-    args [.external_140729692496784] {
-    load .external_140729692496784
-    const #0#
-    prj
-    const #0#
-    prj
-    store print_140729692496816
-    load .external_140729692496784
-    const #0#
-    prj
-    const #1#
-    prj
-    store x_140729692496848
-    line 22
-    line 22
-    load print_140729692496816
-    line 22
-    line 22
-    line 22
-    deref add_140729692496272
-    line 22
-    load x_140729692496848
-    call 1
-    line 22
-    line 22
-    deref var_140729692496752
-    call 1
-    call 1
-    label pround.return
-    return
-}
-deref! code_140729692496880
-line 23
-line 23
-line 23
-deref print_140729692496240
-line 23
+line 15
+line 15
+line 15
+deref print_140737219109232
+line 15
 const #'n'#
 tuple 2
 tuple 0
 tuple 2
-deref! row_140729692496912
-line 24
-line 24
-line 24
+store row_140737219109552
+line 17
+line 17
+line 17
 defun
     filename "example_code\\hello_world.prd"
     free []
-    args [x_140729692496944] {
-    line 24
-    load x_140729692496944
+    args [x_140737219109584] {
+    line 17
+    load x_140737219109584
     label pround.return
     return
 }
-line 24
+line 17
 defun
     filename "example_code\\hello_world.prd"
     free []
-    args [y_140729692496976] {
-    line 24
-    line 24
+    args [y_140737219109616] {
+    line 17
+    line 17
     const #2#
-    line 24
-    load y_140729692496976
+    line 17
+    load y_140737219109616
     tuple 2
     label pround.return
     return
 }
 tuple 2
-deref! z_140729692497008
-line 25
-line 25
-deref code_140729692496880
-line 25
-line 25
-deref print_140729692496240
-line 25
+store z_140737219109648
+line 18
+line 18
+deref code_140737219109520
+line 18
+line 18
+deref print_140737219109232
+line 18
 const #'n'#
 tuple 2
 tuple 0
 tuple 2
 call 1
-store runcode_140729692497040
+store runcode_140737219109680
+line 19
+const #()#
+line 21
+line 22
+line 22
+deref print_140737219109232
+store y_140737219109712
+line 23
+line 23
+const #'b'#
+deref! var_140737219109744
+line 24
+line 24
+defun
+    filename "example_code\\hello_world.prd"
+    free [add_140737219109264 var_140737219109744]
+    args [.external_140737219109776] {
+    load .external_140737219109776
+    const #0#
+    prj
+    const #0#
+    prj
+    store print_140737219109808
+    load .external_140737219109776
+    const #0#
+    prj
+    const #1#
+    prj
+    store x_140737219109840
+    line 24
+    line 24
+    load print_140737219109808
+    line 24
+    line 24
+    line 24
+    deref add_140737219109264
+    line 24
+    load x_140737219109840
+    call 1
+    line 24
+    line 24
+    deref var_140737219109744
+    call 1
+    call 1
+    label pround.return
+    return
+}
+deref! code_140737219109872
+line 25
+line 25
+line 25
+deref print_140737219109232
+line 25
+const #'n'#
+tuple 2
+tuple 0
+tuple 2
+deref! row_140737219109904
 line 26
+line 26
+line 26
+defun
+    filename "example_code\\hello_world.prd"
+    free []
+    args [x_140737219109936] {
+    line 26
+    load x_140737219109936
+    label pround.return
+    return
+}
+line 26
+defun
+    filename "example_code\\hello_world.prd"
+    free []
+    args [y_140737219109968] {
+    line 26
+    line 26
+    const #2#
+    line 26
+    load y_140737219109968
+    tuple 2
+    label pround.return
+    return
+}
+tuple 2
+deref! z_140737219110000
 line 27
+line 27
+deref code_140737219109872
+line 27
+line 27
+deref print_140737219109232
+line 27
+const #'n'#
+tuple 2
+tuple 0
+tuple 2
+call 1
+deref! runcode_140737219110032
 line 28
 line 29
-load runcode_140729692497040
-store x_140729692497072
-load __140729692496368
-deref add_140729692496272
-deref code_140729692496528
-deref hello_world_140729692496336
-deref print_140729692496240
-load row_140729692496560
-load runcode_140729692496688
-deref var_140729692496400
-load x_140729692497072
-load z_140729692496656
+line 30
+line 31
+deref runcode_140737219110032
+store x_140737219110064
+line 33
+const #()#
+load __140737219109360
+deref add_140737219109264
+deref code_140737219109520
+deref hello_world_140737219109328
+deref print_140737219109232
+load row_140737219109552
+load runcode_140737219109680
+deref var_140737219109392
+load x_140737219110064
+load z_140737219109648
 tuple 10
 tuple 0
 tuple 2

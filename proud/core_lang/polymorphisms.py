@@ -40,12 +40,12 @@ def generalise_type(tc_state: TCState, type: te.T, level: te.Level, loc=None, fi
     cnt = 0
     TV: typing.Set[te.Var] = te.ftv(tc_state.infer(type))
     for tv in TV:
-        assert not tv.belong_to.final
+        # assert not tv.belong_to.final, tv.belong_to.final
         if tv.belong_to.final:
             continue
         belong_to = tv.belong_to
         if belong_to.is_closed_after(level):
-            bound = te.Bound("a{}".format(cnt), forall)
+            bound = te.Bound("'a{}".format(cnt), forall)
             cnt += 1
             belong_to.final = bound
             # belong_to.destroy_()

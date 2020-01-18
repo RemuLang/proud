@@ -198,11 +198,11 @@ def make(cgc: CompilerGlobalContext):
                         tenv[sym_def] = t1 = new_var
 
                 level = tc_state.push_level()
+                bound: ir.Expr = module.eval(bound)
 
-                t1_inst = te.fresh(tc_state.new_var, t1)
+                t1_inst = te.fresh(tc_state.new_var, infer(t1))
                 t1_inst = inst(t1_inst, rigid=True)[1]
 
-                bound: ir.Expr = module.eval(bound)
                 t2_inst = bound.type = inst(infer(bound.type))[1]
                 resolve_instance_(outer_scope, bound)
                 unify(t1_inst, t2_inst)

@@ -1,3 +1,8 @@
-module Dbg
+module HW
 
-let test : exist a. a = "123"
+
+let map1 = fun inst ->
+    tellme inst in
+    inst.map
+
+tellme map1

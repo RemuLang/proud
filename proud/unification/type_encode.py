@@ -93,9 +93,7 @@ class PropertyTVGroup:
         another.levels |= self.levels
 
     def is_closed_after(self, level: Level):
-        if level < min(self.levels):
-            return True
-        return all(each.is_closed_after(level) for each in self.linked_by)
+        return level < min(self.levels) and all(each.is_closed_after(level) for each in self.linked_by)
 
     def destroy_(self):
         assert self.final

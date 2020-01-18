@@ -129,7 +129,8 @@ def make(cgc: CompilerGlobalContext):
             if not elts:
                 return ir.Expr(expr=ir.Const(()), type=types.unit_t)
             if len(elts) is 1:
-                return module.eval(elts[0])
+                ret = module.eval(elts[0])
+                return ret
             level = tc_state.push_level()
             elts = list(map(module.eval_with_implicit, elts))
             type = te.Tuple(tuple(e.type for e in elts))
@@ -186,7 +187,6 @@ def make(cgc: CompilerGlobalContext):
 
             if to_mono:
                 ret = ir.Expr(type=ret_t, expr=ir.Momomorphization(layout_type=to_mono, expr=ret))
-
             return ret
 
         def lam(module, arg, type, ret):
@@ -208,12 +208,9 @@ def make(cgc: CompilerGlobalContext):
                 sym_arg = inner_scope.enter(name)
                 tenv[sym_arg] = type_arg
 
-                type_inst_arg = te.fresh(tc_state.new_var, type_arg)
-
-                type_inst_arg = inst(type_inst_arg, rigid=True)[1]
-
                 ret = module.eval_with_implicit(ret)
-                lam_type = te.Arrow(type_inst_arg, ret.type)
+
+                lam_type = te.Arrow(type_arg, ret.type)
                 lam_type = generalise_type(tc_state, lam_type, loc=loc, filename=filename, level=level)
 
             name = "{} |{}|".format(path, name)
@@ -222,42 +219,44 @@ def make(cgc: CompilerGlobalContext):
 
         def let(module, is_rec, seq, body):
             clc = module.clc
-            filename = clc.filename
             with clc.resume_scope():
                 outer_scope = clc.scope = clc.scope.sub_scope()
                 types = []
                 for loc, name, annotation, _ in seq:
-                    _, name = sexpr.unloc(name)
-                    sym_bind = outer_scope.enter(name)
                     if annotation:
                         type_bind = Typing(clc).eval(annotation)
                     else:
                         type_bind = new_var(clc, name)
                     types.append(type_bind)
                     if is_rec:
+                        _, name = sexpr.unloc(name)
+                        sym_bind = outer_scope.enter(name)
                         tenv[sym_bind] = type_bind
 
                 block = []
+                syms = []
                 for (loc, name, annotation, bound), sym_type in zip(seq, types):
                     _, name = sexpr.unloc(name)
-                    with clc.resume_scope():
-                        level = tc_state.push_level()
-                        inner_scope = clc.scope = outer_scope.sub_scope()
-                        if is_rec:
-                            sym_bind = inner_scope.require(name)
-                        else:
-                            sym_bind = inner_scope.enter(name)
-                            tenv[sym_bind] = sym_type
-                        t_inst = te.fresh(tc_state.new_var, sym_type)
-                        t_inst = inst(t_inst, rigid=True)[1]
-                        bound = module.eval_with_implicit(bound)
-                        tc_state.unify(t_inst, bound.type)
-                        gen_type = generalise_type(tc_state, t_inst, loc=loc, filename=clc.filename, level=level)
-                        bound.type = gen_type
+                    level = tc_state.push_level()
+                    inner_scope = clc.scope = outer_scope.sub_scope()
+                    if is_rec:
+                        sym_bind = inner_scope.require(name)
+                    else:
+                        sym_bind = inner_scope.enter(name)
+                        tenv[sym_bind] = sym_type
+                    syms.append(sym_bind)
+                    t_inst = te.fresh(tc_state.new_var, sym_type)
+                    t_inst = inst(t_inst, rigid=True)[1]
+                    bound = module.eval_with_implicit(bound)
+                    tc_state.unify(t_inst, bound.type)
+                    gen_type = generalise_type(tc_state, t_inst, loc=loc, filename=clc.filename, level=level)
+                    bound.type = gen_type
+
                     unify(gen_type, sym_type)
                     block.append(ignore(ir.Set(sym_bind, bound)))
 
                 level = tc_state.push_level()
+                clc.scope = inner_scope.sub_scope()
                 body = module.eval_with_implicit(body)
                 block.append(body)
                 body.type = generalise_type(tc_state, body.type, loc=clc.location, filename=clc.filename, level=level)
@@ -307,6 +306,7 @@ def make(cgc: CompilerGlobalContext):
             block.append(quote_expr)
             ret_expr = ir.Fun("<quote>", clc.filename, sym_arg, ir.Expr(expr=ir.Block(block), type=quote_expr.type))
             ret_type = te.Arrow(type_arg, quote_expr.type)
-            return ir.Expr(expr=ret_expr, type=te.Forall(rho_group, (rho,), ret_type))
+            ret_type = te.Forall(rho_group, (rho,), ret_type)
+            return ir.Expr(expr=ret_expr, type=ret_type)
 
     return Express, [link_quote, link_typing]

@@ -15,12 +15,21 @@ let functor : forall f.
 let list_functor : valtype functor list = {map = coerce 0}
 tellme list_functor
 
-let map1 = | inst | -> | func | ->
+let map1 =
+    # higher rank types should be annotated
+    | inst : valtype functor list  | -> | func | ->
+    let x = inst.map in
     inst.map func
 
 tellme map1
-# let polymap : forall f. (valtype functor f) -> forall a b. (a -> b) -> f a -> f b =
-#    | inst | -> | func | -> | data | -> inst.map func data
+
+let polymap =
+    | inst | -> | func | -> | data | -> inst.map func data
+
+tellme polymap
+
+# let _ = polymap list_functor
+
 # let polymap : forall f a b. (valtype functor f) -> (a -> b) -> f a -> f b =
 #    | inst | -> | func | -> | data | -> inst.map func data
 

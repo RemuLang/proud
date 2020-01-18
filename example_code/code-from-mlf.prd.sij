@@ -6,48 +6,48 @@ line 2
 defun
     filename "example_code\\code-from-mlf.prd"
     free []
-    args [x_140729692496240] {
+    args [x_140737219109232] {
     line 2
     line 2
-    load x_140729692496240
+    load x_140737219109232
     label pround.return
     return
 }
-deref! auto_140729692496272
+deref! auto_140737219109264
 line 3
 line 3
 defun
     filename "example_code\\code-from-mlf.prd"
     free []
-    args [x_140729692496304] {
+    args [x_140737219109296] {
     line 3
     line 3
     defun
         filename "example_code\\code-from-mlf.prd"
-        free [x_140729692496304]
-        args [y_140729692496336] {
+        free [x_140737219109296]
+        args [y_140737219109328] {
         line 3
         line 3
-        deref x_140729692496304
+        deref x_140737219109296
         label pround.return
         return
     }
     label pround.return
     return
 }
-deref! choose_140729692496368
+deref! choose_140737219109360
 line 4
 line 4
-deref choose_140729692496368
+deref choose_140737219109360
 line 4
-deref auto_140729692496272
+deref auto_140737219109264
 call 1
-store res_140729692496400
+store res_140737219109392
 line 6
 const #()#
-deref auto_140729692496272
-deref choose_140729692496368
-load res_140729692496400
+deref auto_140737219109264
+deref choose_140737219109360
+load res_140737219109392
 tuple 3
 tuple 0
 tuple 2

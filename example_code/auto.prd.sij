@@ -9,10 +9,48 @@ line 3
 line 3
 line 3
 const #0#
-store eq_140737219109264
-load eq_140737219109264
+deref! eq_140737219109264
+line 5
+line 5
+defun
+    filename "example_code\\auto.prd"
+    free []
+    args [a_140737219109296] {
+    line 5
+    line 5
+    load a_140737219109296
+    line 5
+    load a_140737219109296
+    tuple 2
+    label pround.return
+    return
+}
+deref! f1_140737219109328
+line 6
+const #()#
+line 8
+line 8
+line 8
+const #0#
+deref! f2_140737219109360
+line 10
+line 10
+deref eq_140737219109264
+line 10
+deref f1_140737219109328
+call 1
+line 10
+deref f2_140737219109360
+call 1
+store __140737219109392
+line 12
+const #()#
+load __140737219109392
+deref eq_140737219109264
+deref f1_140737219109328
+deref f2_140737219109360
 load zz_140737219109232
-tuple 2
+tuple 5
 tuple 0
 tuple 2
 print

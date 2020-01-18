@@ -1,5 +1,5 @@
 runtime operator
-filename "example_code/annotate.prd"
+filename "example_code\\annotate.prd"
 line 1
 const #()#
 store MyMod_140737219109232
@@ -18,7 +18,7 @@ deref! eqi_140737219109328
 line 6
 line 6
 defun
-    filename "example_code/annotate.prd"
+    filename "example_code\\annotate.prd"
     free []
     args [x_140737219109360] {
     line 6
@@ -43,7 +43,7 @@ deref! outer_func_140737219109424
 line 10
 line 10
 defun
-    filename "example_code/annotate.prd"
+    filename "example_code\\annotate.prd"
     free [outer_func_140737219109424]
     args [x_140737219109456] {
     line 10
