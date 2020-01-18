@@ -11,3 +11,5 @@ let _ = eq f1 f2
 
 tellme _
 
+fn f = x -> x
+tellme f

@@ -1,16 +1,23 @@
 module HW
 
-let f2 =
-    | f : forall a. a -> a | ->
-        let g : forall a. a -> (a, a) = fun a -> (f a , f a) in
-        tellme g
-        in g
-
-
+# let f2 =
+#    | f : forall a. a -> a | ->
+#        let g : forall a. a -> (a, a) = fun a -> (f a , f a) in
+#        tellme g
+#        in g
 # let f3 : forall a. a -> a = coerce 0
 
 # let _ = f2 f3
 
 # tellme f2
+
+
+let functor : forall f.
+              value f -> value ({map : forall u1 u2. (u1 -> u2) -> f u1 -> f u2}) =
+    fun _  -> typeval exist _'. _'
+
+
+let polymap : forall f. valtype functor f -> forall a b. (a -> b) -> f a -> f b =
+   | inst  | -> (| func | -> inst.map func): forall a b. (a -> b) -> exist f. f a -> f b
 
 

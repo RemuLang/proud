@@ -52,7 +52,7 @@ def make(cgc: CompilerGlobalContext):
             return ir.Expr(expr=ir.Extern(foreign_code), type=new_var(clc, 'extern'))
 
         def ite(module, cond, true_clause, else_clause):
-            level = tc_state.push_level()
+            # level = tc_state.push_level()
             cond = module.eval_with_implicit(cond)
 
             tc_state.unify(cond.type, types.bool_t)
@@ -61,8 +61,8 @@ def make(cgc: CompilerGlobalContext):
             ec = module.eval_with_implicit(else_clause)
 
             tc_state.unify(tc.type, ec.type)
-            clc = module.clc
-            ec.type = tc.type = generalise_type(tc_state, tc.type, level=level, loc=clc.location, filename=clc.filename)
+            # clc = module.clc
+            # ec.type = tc.type = generalise_type(tc_state, tc.type, level=level, loc=clc.location, filename=clc.filename)
             return ir.Expr(expr=ir.ITE(cond, tc, ec), type=tc.type)
 
         def type(module, name, definition):
@@ -80,7 +80,7 @@ def make(cgc: CompilerGlobalContext):
             return ir.Expr(expr=ir.Coerce(expr), type=new_var(module.clc, "coerce"))
 
         def attr(module, base, attr_name: str):
-            level = tc_state.push_level()
+            # level = tc_state.push_level()
             base = module.eval_with_implicit(base)
             clc = module.clc
             var = new_var(clc, 'attr')
@@ -90,8 +90,8 @@ def make(cgc: CompilerGlobalContext):
             # TODO: how to deal with a polymorphic record value?
             # e.g., forall a. {x : ... | a}
             unify(record_type, base.type)
-            var = infer(var)
-            var = generalise_type(tc_state, var, level=level, loc=clc.location, filename=clc.filename)
+            # var = infer(var)
+            # var = generalise_type(tc_state, var, level=level, loc=clc.location, filename=clc.filename)
             return ir.Expr(expr=ir.Field(base=base, attr=attr_name), type=var)
 
         def record(module, pairs, row):
@@ -140,15 +140,18 @@ def make(cgc: CompilerGlobalContext):
             return ir.Expr(expr=ir.Tuple(elts), type=type)
 
         def annotate(module, var, type):
-            level = tc_state.push_level()
+            # level = tc_state.push_level()
             clc = module.clc
             var = module.eval_with_implicit(var)
             type = infer(Typing(clc).eval(type))
             type_inst = inst(type, rigid=True)[1]
 
             tc_state.unify(type_inst, var.type)
-            var.type = gen_type = generalise_type(tc_state, type_inst, loc=clc.location, filename=clc.filename, level=level)
-            unify(gen_type, type)
+            # var.type = gen_type = generalise_type(tc_state, type_inst, loc=clc.location, filename=clc.filename,
+            #                                       level=level)
+            # unify(gen_type, type)
+            var.type = type
+            # print(type)
             return var
 
         def loc(module, location, contents):
@@ -215,15 +218,14 @@ def make(cgc: CompilerGlobalContext):
                 type_arg = new_var(clc, name)
 
             with clc.resume_scope():
-                level = tc_state.push_level()
+                # level = tc_state.push_level()
                 inner_scope = outer_scope.sub_scope(hold_bound=True)
                 clc.scope = inner_scope
                 sym_arg = inner_scope.enter(name)
                 tenv[sym_arg] = type_arg
-
                 ret = module.eval(ret)
-                lam_type = te.Arrow(type_arg, ret.type)
-                # lam_type = generalise_type(tc_state, lam_type, loc=loc, filename=filename, level=level)
+                lam_type = te.Arrow(type_arg,
+                                    ret.type)  # lam_type = generalise_type(tc_state, lam_type, loc=loc, filename=filename, level=level)
 
             name = "{} |{}|".format(path, name)
             sym_arg = ir.Fun(name, filename, sym_arg, ret)

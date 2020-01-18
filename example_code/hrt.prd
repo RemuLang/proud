@@ -1,0 +1,13 @@
+module HRT
+
+let id = fun x -> x
+
+let a = (id 1, id "2")
+
+tellme a
+
+let b =
+    let f = | f : forall a. a -> a | -> (f 1, f "2")
+    in f id
+
+tellme b

@@ -1,0 +1,67 @@
+runtime operator
+filename "example_code\\hrt.prd"
+line 1
+line 3
+line 3
+defun
+    filename "example_code\\hrt.prd"
+    free []
+    args [x_140737219109232] {
+    line 3
+    load x_140737219109232
+    label pround.return
+    return
+}
+deref! id_140737219109264
+line 5
+line 5
+line 5
+deref id_140737219109264
+line 5
+const #1#
+call 1
+line 5
+deref id_140737219109264
+line 5
+const #'2'#
+call 1
+tuple 2
+store a_140737219109296
+line 7
+const #()#
+line 9
+line 10
+line 10
+defun
+    filename "example_code\\hrt.prd"
+    free []
+    args [f_140737219109328] {
+    line 10
+    line 10
+    line 10
+    load f_140737219109328
+    line 10
+    const #1#
+    call 1
+    line 10
+    load f_140737219109328
+    line 10
+    const #'2'#
+    call 1
+    tuple 2
+    label pround.return
+    return
+}
+deref! f_140737219109360
+store b_140737219109392
+line 13
+const #()#
+load a_140737219109296
+load b_140737219109392
+deref id_140737219109264
+tuple 3
+tuple 0
+tuple 2
+print
+const #None#
+return

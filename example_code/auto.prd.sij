@@ -45,12 +45,26 @@ call 1
 store __140737219109392
 line 12
 const #()#
+line 14
+defun
+    filename "example_code\\auto.prd"
+    free []
+    args [x_140737219109424] {
+    line 14
+    load x_140737219109424
+    label pround.return
+    return
+}
+store f_140737219109456
+line 15
+const #()#
 load __140737219109392
 deref eq_140737219109264
+load f_140737219109456
 deref f1_140737219109328
 deref f2_140737219109360
 load zz_140737219109232
-tuple 5
+tuple 6
 tuple 0
 tuple 2
 print

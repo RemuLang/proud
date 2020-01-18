@@ -18,8 +18,7 @@ tellme list_functor
 let map1 =
     # higher rank types should be annotated
     | inst : valtype functor list  | -> | func | ->
-    let x = inst.map in
-    inst.map func
+    let x = inst.map in inst.map func
 
 tellme map1
 
@@ -29,9 +28,8 @@ let map2p = {map = f1}
 
 tellme map2p
 
-# let polymap =
-#    | inst  | ->
-#        ((fun func -> fun data -> inst.map func data): exist f. forall u1 u2. (u1 -> u2) -> f u1 -> f u2)
+let polymap : forall f. valtype functor f -> forall a b. (a -> b) -> f a -> f b =
+   | inst  | -> (| func | -> inst.map func): forall a b. (a -> b) -> exist f. f a -> f b
 
 # tellme polymap
 

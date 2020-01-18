@@ -77,16 +77,6 @@ defun
         const #0#
         prj
         store x_140737219109520
-        line 22
-        line 22
-        deref inst_140737219109456
-        const #0#
-        prj
-        const #0#
-        prj
-        line 22
-        deref func_140737219109488
-        call 1
         label pround.return
         return
     }
@@ -94,17 +84,16 @@ defun
     return
 }
 store map1_140737219109552
-line 24
+line 23
 const #()#
-line 26
-line 26
-line 26
+line 25
+line 25
+line 25
 const #0#
 deref! f1_140737219109584
-line 28
-line 28
-line 28
-line 28
+line 27
+line 27
+line 27
 deref f1_140737219109584
 tuple 1
 tuple 0
@@ -112,6 +101,24 @@ tuple 2
 store map2p_140737219109616
 line 29
 const #()#
+line 31
+line 32
+defun
+    filename "example_code\\hkt.prd"
+    free []
+    args [inst_140737219109648] {
+    line 32
+    line 32
+    line 32
+    load inst_140737219109648
+    const #0#
+    prj
+    const #0#
+    prj
+    label pround.return
+    return
+}
+store polymap_140737219109680
 deref cons_140737219109264
 deref f1_140737219109584
 deref functor_140737219109392
@@ -121,7 +128,8 @@ load map1_140737219109552
 load map2p_140737219109616
 deref mylist_140737219109232
 deref nil_140737219109296
-tuple 9
+load polymap_140737219109680
+tuple 10
 tuple 0
 tuple 2
 print
