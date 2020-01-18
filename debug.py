@@ -1,6 +1,6 @@
 from proud.pybackend import PyBackEnd
 
-filename = "example_code/hkt.prd"
+filename = "example_code/debug.prd"
 end = PyBackEnd()
 end.verbose = True
 # try:

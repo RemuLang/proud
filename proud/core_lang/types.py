@@ -52,7 +52,7 @@ class Var(te.Var):
         self.filename = filename
 
     def __repr__(self):
-        return '\'{}'.format(self.name)
+        return '\'{}:{}'.format(self.name, self.level)
 
 
 def fresh(n: str):

@@ -16,6 +16,9 @@ class _Max:
     def __gt__(self, other):
         return True
 
+    def __repr__(self):
+        return 'inf'
+
 
 def make(self: 'TCState'):
     cur_level = 0
@@ -171,17 +174,17 @@ def make(self: 'TCState'):
             ft_r = [(each, infer(each)) for each in ft_r]
 
             for orig, pruned in ft_l:
-                new = subst(l, pruned)
                 if not orig.belong_to.is_closed_after(level):
-                    _mismatch()
+                    continue
+                new = subst(l, pruned)
                 if not visit_check(lambda x: not isinstance(x, GenericVar))(new):
                     _mismatch()
                 orig.belong_to.final_to(new)
 
             for orig, pruned in ft_r:
-                new = subst(r, pruned)
                 if not orig.belong_to.is_closed_after(level):
-                    _mismatch()
+                    continue
+                new = subst(r, pruned)
                 if not visit_check(lambda x: not isinstance(x, GenericVar))(new):
                     _mismatch()
 

@@ -13,7 +13,7 @@ line 6
 line 6
 defun
     filename "example_code\\hello_world.prd"
-    free [add_140737219109264 print_140737219109232]
+    free [print_140737219109232 add_140737219109264]
     args [r_140737219109296] {
     line 7
     deref print_140737219109232
@@ -152,104 +152,7 @@ line 22
 line 22
 deref print_140737219109232
 store y_140737219109712
-line 23
-line 23
-const #'b'#
-deref! var_140737219109744
-line 24
-line 24
-defun
-    filename "example_code\\hello_world.prd"
-    free [add_140737219109264 var_140737219109744]
-    args [.external_140737219109776] {
-    load .external_140737219109776
-    const #0#
-    prj
-    const #0#
-    prj
-    store print_140737219109808
-    load .external_140737219109776
-    const #0#
-    prj
-    const #1#
-    prj
-    store x_140737219109840
-    line 24
-    line 24
-    load print_140737219109808
-    line 24
-    line 24
-    line 24
-    deref add_140737219109264
-    line 24
-    load x_140737219109840
-    call 1
-    line 24
-    line 24
-    deref var_140737219109744
-    call 1
-    call 1
-    label pround.return
-    return
-}
-deref! code_140737219109872
-line 25
-line 25
-line 25
-deref print_140737219109232
-line 25
-const #'n'#
-tuple 2
-tuple 0
-tuple 2
-deref! row_140737219109904
-line 26
-line 26
-line 26
-defun
-    filename "example_code\\hello_world.prd"
-    free []
-    args [x_140737219109936] {
-    line 26
-    load x_140737219109936
-    label pround.return
-    return
-}
-line 26
-defun
-    filename "example_code\\hello_world.prd"
-    free []
-    args [y_140737219109968] {
-    line 26
-    line 26
-    const #2#
-    line 26
-    load y_140737219109968
-    tuple 2
-    label pround.return
-    return
-}
-tuple 2
-deref! z_140737219110000
-line 27
-line 27
-deref code_140737219109872
-line 27
-line 27
-deref print_140737219109232
-line 27
-const #'n'#
-tuple 2
-tuple 0
-tuple 2
-call 1
-deref! runcode_140737219110032
-line 28
-line 29
-line 30
-line 31
-deref runcode_140737219110032
-store x_140737219110064
+store x_140737219109744
 line 33
 const #()#
 load __140737219109360
@@ -260,7 +163,7 @@ deref print_140737219109232
 load row_140737219109552
 load runcode_140737219109680
 deref var_140737219109392
-load x_140737219110064
+load x_140737219109744
 load z_140737219109648
 tuple 10
 tuple 0

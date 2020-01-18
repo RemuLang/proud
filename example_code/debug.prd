@@ -1,8 +1,16 @@
 module HW
 
+let f2 =
+    | f : forall a. a -> a | ->
+        let g : forall a. a -> (a, a) = fun a -> (f a , f a) in
+        tellme g
+        in g
 
-let map1 = fun inst ->
-    tellme inst in
-    inst.map
 
-tellme map1
+# let f3 : forall a. a -> a = coerce 0
+
+# let _ = f2 f3
+
+# tellme f2
+
+

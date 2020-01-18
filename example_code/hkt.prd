@@ -23,10 +23,17 @@ let map1 =
 
 tellme map1
 
-let polymap =
-    | inst | -> | func | -> | data | -> inst.map func data
+let f1 : forall u1 u2. (u1 -> u2) -> list u1 -> list u2 = coerce 0
 
-tellme polymap
+let map2p = {map = f1}
+
+tellme map2p
+
+# let polymap =
+#    | inst  | ->
+#        ((fun func -> fun data -> inst.map func data): exist f. forall u1 u2. (u1 -> u2) -> f u1 -> f u2)
+
+# tellme polymap
 
 # let _ = polymap list_functor
 

@@ -44,8 +44,9 @@ def generalise_type(tc_state: TCState, type: te.T, level: te.Level, loc=None, fi
         if tv.belong_to.final:
             continue
         belong_to = tv.belong_to
+        # print(level, tv, belong_to.show_linked_by())
         if belong_to.is_closed_after(level):
-            bound = te.Bound("'a{}".format(cnt), forall)
+            bound = te.Bound("a{}".format(cnt), forall)
             cnt += 1
             belong_to.final = bound
             # belong_to.destroy_()

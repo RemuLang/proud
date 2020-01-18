@@ -95,6 +95,9 @@ class PropertyTVGroup:
     def is_closed_after(self, level: Level):
         return level < min(self.levels) and all(each.is_closed_after(level) for each in self.linked_by)
 
+    def show_linked_by(self):
+        return self.vars, [each.show_linked_by() for each in self.linked_by]
+
     def destroy_(self):
         assert self.final
         del self.levels
@@ -137,7 +140,7 @@ if DEBUG:
             cnt += 1
 
         def __repr__(self):
-            return '{}{}'.format(self.name or 'var', self.id)
+            return '{}{}:{}'.format(self.name or 'var', self.id, self.level)
 
 else:
     class InternalVar(Var):
@@ -150,7 +153,7 @@ else:
             self.name = name
 
         def __repr__(self):
-            return '{}{}'.format(self.name or 'var', _shorter_string_base(id(self)))
+            return '{}{}:{}'.format(self.name or 'var', _shorter_string_base(id(self)), self.level)
 
 
 @dataclass(eq=True, frozen=True, order=True)

@@ -144,9 +144,11 @@ def make(cgc: CompilerGlobalContext):
             clc = module.clc
             var = module.eval_with_implicit(var)
             type = infer(Typing(clc).eval(type))
-            type = inst(type, rigid=True)[1]
-            tc_state.unify(type, var.type)
-            var.type = generalise_type(tc_state, type, loc=clc.location, filename=clc.filename, level=level)
+            type_inst = inst(type, rigid=True)[1]
+
+            tc_state.unify(type_inst, var.type)
+            var.type = gen_type = generalise_type(tc_state, type_inst, loc=clc.location, filename=clc.filename, level=level)
+            unify(gen_type, type)
             return var
 
         def loc(module, location, contents):
@@ -174,11 +176,22 @@ def make(cgc: CompilerGlobalContext):
             f.type = inst(f.type)[1]
             resolve_instance_(clc.scope, f)
             level = tc_state.push_level()
-            arg = module.eval_with_implicit(arg)
-            ret_t = new_var(clc, name='ret')
-            inst_arrow = te.Arrow(arg.type, ret_t)
-            tc_state.unify(inst_arrow, f.type)
-            ret_t = generalise_type(tc_state, ret_t, loc=clc.location, filename=clc.filename, level=level)
+            arg = module.eval(arg)
+            arg.type = infer(arg.type)
+            arg_is_forall = isinstance(arg.type, te.Forall)
+            arg.type = inst(arg.type)[1]
+            resolve_instance_(clc.scope, arg)
+            f.type = infer(f.type)
+            if arg_is_forall and isinstance(f.type, te.Arrow) and isinstance(f.type.arg, te.Forall):
+                # a simple strategy to support higher rank types when annotated.
+                f_type_arg = inst(f.type.arg, rigid=True)[1]
+                unify(arg.type, f_type_arg)
+                ret_t = f.type.ret
+            else:
+                ret_t = new_var(clc, name='ret')
+                inst_arrow = te.Arrow(arg.type, ret_t)
+                unify(inst_arrow, f.type)
+                ret_t = generalise_type(tc_state, ret_t, loc=clc.location, filename=clc.filename, level=level)
 
             if to_poly:
                 arg = ir.Expr(type=arg.type, expr=ir.Polymorphization(layout_type=to_poly, expr=arg))
@@ -208,10 +221,9 @@ def make(cgc: CompilerGlobalContext):
                 sym_arg = inner_scope.enter(name)
                 tenv[sym_arg] = type_arg
 
-                ret = module.eval_with_implicit(ret)
-
+                ret = module.eval(ret)
                 lam_type = te.Arrow(type_arg, ret.type)
-                lam_type = generalise_type(tc_state, lam_type, loc=loc, filename=filename, level=level)
+                # lam_type = generalise_type(tc_state, lam_type, loc=loc, filename=filename, level=level)
 
             name = "{} |{}|".format(path, name)
             sym_arg = ir.Fun(name, filename, sym_arg, ret)
@@ -255,11 +267,11 @@ def make(cgc: CompilerGlobalContext):
                     unify(gen_type, sym_type)
                     block.append(ignore(ir.Set(sym_bind, bound)))
 
-                level = tc_state.push_level()
+                # level = tc_state.push_level()
                 clc.scope = inner_scope.sub_scope()
-                body = module.eval_with_implicit(body)
-                block.append(body)
-                body.type = generalise_type(tc_state, body.type, loc=clc.location, filename=clc.filename, level=level)
+                body = module.eval(body)
+                # block.append(body)
+                # body.type = generalise_type(tc_state, body.type, loc=clc.location, filename=clc.filename, level=level)
                 return ir.Expr(type=body.type, expr=ir.Block(block))
 
         def eval_sym(self, x: str) -> ir.Expr:
