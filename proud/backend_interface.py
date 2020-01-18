@@ -22,6 +22,7 @@ class BackEnd:
     filename: str
     ctx: CompilerGlobalContext
     types_to_show: typing.List[typing.Tuple[Location, str, Sym]]
+    verbose: bool
 
     def codegen(self, ctx: CompilerGlobalContext, sexpr: tuple) -> str:
         raise NotImplementedError
@@ -42,6 +43,8 @@ class BackEnd:
         raise NotImplementedError
 
     def main(self, in_file, out_file):
+        if not hasattr(self, 'verbose'):
+            self.verbose = False
         self.filename = in_file
         self.types_to_show = []
         self.ctx = ctx = self.init_global_context()
@@ -53,10 +56,12 @@ class BackEnd:
         try:
             mod_expr = Modular(clc).eval(ast)
         except excs.StaticCheckingFailed as e:
-            clc = e.clc
-            sys.exit('{} {} at file {}, line {}, column {}'.format(
-                e.exc.__class__.__name__, e.exc, clc.filename, clc.location[0],
-                clc.location[1]))
+            clc = typing.cast(CompilerLocalContext, e.clc)
+            if self.verbose:
+                raise
+            else:
+                sys.exit('{} {} at file {}, line {}, column {}'.format(e.exc.__class__.__name__, e.exc, clc.filename,
+                                                                       clc.location[0], clc.location[1]))
 
         resolve_type(mod_expr, ctx)
         sexpr = SExprGen().eval(mod_expr)
@@ -65,8 +70,8 @@ class BackEnd:
         tenv = ctx.tenv
         tc_state = ctx.tc_state
         for loc, filename, each in self.types_to_show:
-            print('[file: {} |line: {} |column: {}]\n'.format(filename, loc[0], loc[1]),
-                  each.name, ':', tc_state.infer(tenv[each]))
+            print('[file: {} |line: {} |column: {}]\n'.format(filename, loc[0], loc[1]), each.name, ':',
+                  tc_state.infer(tenv[each]))
 
         with open(out_file, 'w') as f:
             f.write(code)

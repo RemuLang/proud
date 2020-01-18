@@ -4,7 +4,7 @@ from proud.core_lang.sexpr import is_ast
 from proud.core_lang.scope import Sym, Scope
 from proud.core_lang import types
 from proud.backend_interface import BackEnd, ModuleFinder
-from hybridts import type_encoding as te
+from proud.unification import type_encode as te
 import json
 import typing
 import os

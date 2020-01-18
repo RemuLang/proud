@@ -9,15 +9,36 @@ except ImportError:
     pass
 
 
-def make(self: 'TCState', levels: t.List[t.Set[Var]]):
+class _Max:
+    def __lt__(self, other):
+        return False
+
+    def __gt__(self, other):
+        return True
+
+
+def make(self: 'TCState'):
+    cur_level = 0
+
+    def push_level():
+        nonlocal cur_level
+        cur_level += 1
+        return cur_level - 1
+
     def new_var(*props, Var=None, **kwargs):
         group = PropertyTVGroup(*props)
-        level = len(levels) - 1
-        assert level >= 0
-        var = (Var or InternalVar)(level, **kwargs)
-        var.belong_to = group
-        group.vars.add(var)
-        levels[level].add(var)
+        level = cur_level
+        var = (Var or InternalVar)(**kwargs)
+        var.level = level
+        group.add(var)
+        return var
+
+    def user_var(*props, Var=None, **kwargs):
+        group = PropertyTVGroup(*props)
+        level = _Max()
+        var = (Var or InternalVar)(**kwargs)
+        var.level = level
+        group.add(var)
         return var
 
     def infer_row(x: Row) -> Row:
@@ -42,7 +63,8 @@ def make(self: 'TCState', levels: t.List[t.Set[Var]]):
             if not y:
                 return x
             assert not isinstance(y, Var)
-            y = belong.final = infer(y)
+            y = infer(y)
+            belong.final_to(y)
             return y
         if isinstance(x, Bound):
             return x
@@ -61,14 +83,14 @@ def make(self: 'TCState', levels: t.List[t.Set[Var]]):
             if isinstance(row, RowPoly):
                 return row.type
             return Record(row)
-        raise TypeError(x)
+        raise TypeError(x, type(x))
 
     def inst_forall(bound_vars: t.Iterable[Bound], polytype: T):
         mapping: t.Dict[T, Var] = {b: GenericVar(b.name) for b in bound_vars}
         _, monotype = fresh_bounds(polytype, mapping)
         return mapping, monotype
 
-    def inst(type, rigid=True) -> t.Tuple[t.Dict[T, Var], T]:
+    def inst(type, rigid=False) -> t.Tuple[t.Dict[T, Var], T]:
         """
         When using this, there should be no free variable in the scope of forall!
         """
@@ -89,7 +111,10 @@ def make(self: 'TCState', levels: t.List[t.Set[Var]]):
 
         if isinstance(lhs, Var):
             if occur_in(lhs, rhs):
-                raise excs.IllFormedType(" a = a -> b")
+                raise excs.RecursiveTypeVar(" a = a -> b")
+            belong_to = lhs.belong_to
+            if not isinstance(rhs, Var) and is_rigid in belong_to.properties:
+                raise excs.RigidTypeExpanding(lhs, rhs)
             lhs.belong_to.final_to(rhs)
             return
 
@@ -107,6 +132,7 @@ def make(self: 'TCState', levels: t.List[t.Set[Var]]):
                 raise excs.TypeMismatch(lhs, rhs)
 
         if isinstance(lhs, Forall) and isinstance(rhs, Forall):
+            level = push_level()
             ft_l = ftv(lhs.poly_type)
             ft_r = ftv(rhs.poly_type)
             freshes_l, l_p = inst_forall(lhs.fresh_vars, lhs.poly_type)
@@ -146,14 +172,15 @@ def make(self: 'TCState', levels: t.List[t.Set[Var]]):
 
             for orig, pruned in ft_l:
                 new = subst(l, pruned)
-                if orig.belong_to.link_from or not visit_check(lambda x: not isinstance(x, GenericVar))(new):
-                    raise _mismatch()
+                if not orig.belong_to.is_closed_after(level):
+                    _mismatch()
+                if not visit_check(lambda x: not isinstance(x, GenericVar))(new):
+                    _mismatch()
                 orig.belong_to.final_to(new)
 
             for orig, pruned in ft_r:
                 new = subst(r, pruned)
-
-                if orig.belong_to.link_from:
+                if not orig.belong_to.is_closed_after(level):
                     _mismatch()
                 if not visit_check(lambda x: not isinstance(x, GenericVar))(new):
                     _mismatch()
@@ -246,3 +273,5 @@ def make(self: 'TCState', levels: t.List[t.Set[Var]]):
     self.extract_row = extract_row
     self.infer = infer
     self.new_var = new_var
+    self.user_var = user_var
+    self.push_level = push_level

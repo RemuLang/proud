@@ -1,0 +1,3 @@
+module Dbg
+
+let test : exist a. a = "123"

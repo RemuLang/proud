@@ -1,7 +1,8 @@
-from hybridts import type_encoding as te
+from proud.unification import type_encode as te
+
 # (a : type b) implies ((x : a) implies (x : b))
 # for "value as type".
-# This is not achieve in type system, but the compiler.
+# This is not achieved in type system, but the compiler.
 
 compiler_builtin_file = object()
 
@@ -26,8 +27,7 @@ class Nom(te.Nom):
         return self.name
 
     def __repr__(self):
-
-        return '<{}{}>'.format(self.name, show_loc(loc=self.loc, filename=self.filename))
+        return '{}'.format(self.name)  # show_loc(loc=self.loc, filename=self.filename))
 
 
 class ForallScope(te.ForallGroup):
@@ -54,31 +54,13 @@ class Var(te.Var):
     def __repr__(self):
         return '\'{}'.format(self.name)
 
-    # def __repr__(self):
-    #     return '<{}{}>'.format(self.name,
-    #                            show_loc(filename=self.filename, loc=self.loc))
-
-
-def _remove_bound_scope_visitor(_, t):
-    if isinstance(t, te.Forall):
-        return (), t.poly_type
-    return (), t
-
-
-_visit_bound_scope_visitor = te.pre_visit(_remove_bound_scope_visitor)
-
-
-def remove_bound_scope(t: te.Forall):
-    return t.poly_type
-    # return _visit_bound_scope_visitor((), t)
-
 
 def fresh(n: str):
     return te.UnboundFresh(n)
 
 
 type_type = Nom("type")
-anyway_type = Nom("anyway(shouldn't be awared by user!)")
+anyway_type = Nom("anyway(shouldn't be awared by users!)")
 int_t = Nom("int")
 string_t = Nom("string")
 float_t = Nom("float")
@@ -88,5 +70,5 @@ bool_t = Nom("bool")
 unit_t = Nom("unit")
 
 _bot_forall_scope = ForallScope()
-_bot_bound = te.Fresh("a", _bot_forall_scope)
-bot = te.Forall(_bot_forall_scope, (_bot_bound, ), _bot_bound)
+_bot_bound = te.Bound("a", _bot_forall_scope)
+bot = te.Forall(_bot_forall_scope, (_bot_bound,), _bot_bound)

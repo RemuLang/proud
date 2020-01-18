@@ -24,7 +24,7 @@ class TypeCheckError(Exception):
     pass
 
 
-class IllFormedType(TypeCheckError):
+class RecursiveTypeVar(TypeCheckError):
     form: str
 
     def __init__(self, form):
@@ -65,8 +65,9 @@ class ShouldNotFreshVarHere(TypeCheckError):
 class RigidTypeExpanding(TypeCheckError):
     var: object
 
-    def __init__(self, var: object):
+    def __init__(self, var: object, to: object):
         self.var = var
+        self.to = to
 
 
 class StructureCannotUnify(TypeCheckError):

@@ -1,4 +1,4 @@
-from hybridts import type_encoding as te
+from proud.unification import type_encode as te
 
 
 def _sort_key(x):
@@ -31,8 +31,7 @@ def rec_polymorphize(require: te.T, actual: te.T):
     if isinstance(require, te.Tuple):
         assert isinstance(actual, te.Tuple)
 
-        ret = tuple(
-            rec_polymorphize(req, act) for req, act in zip(require.elts, actual.elts))
+        ret = tuple(rec_polymorphize(req, act) for req, act in zip(require.elts, actual.elts))
         if all(e is None for e in ret):
             return None
         return ret
@@ -45,8 +44,7 @@ def rec_polymorphize(require: te.T, actual: te.T):
         actual_fields = {n: i for i, n in enumerate(actual_fields)}
         ret = []
         for i, f in enumerate(require_fields):
-            ret.append((actual_fields.pop(f),
-                        rec_polymorphize(require_field_ts[f], actual_field_ts[f])))
+            ret.append((actual_fields.pop(f), rec_polymorphize(require_field_ts[f], actual_field_ts[f])))
         if check_normalized(ret) and not actual_fields:
             # final[i] = have[ret[i]]
             return None
@@ -70,8 +68,7 @@ def polymorphize(require: te.T, actual: te.T):
 def rec_monomorphize(require: te.T, actual: te.T):
     if isinstance(actual, te.Tuple):
         assert isinstance(require, te.Tuple)
-        ret = tuple(
-            rec_monomorphize(req, act) for req, act in zip(require.elts, actual.elts))
+        ret = tuple(rec_monomorphize(req, act) for req, act in zip(require.elts, actual.elts))
         if all(e is None for e in ret):
             return
         return ret
@@ -86,8 +83,7 @@ def rec_monomorphize(require: te.T, actual: te.T):
         hd = []
         for i, f in enumerate(actual_fields):
             # final[ret[i]] = have[i]
-            hd.append((require_fields.pop(f),
-                       rec_monomorphize(require_field_ts[f], actual_field_ts[f])))
+            hd.append((require_fields.pop(f), rec_monomorphize(require_field_ts[f], actual_field_ts[f])))
         if check_normalized(hd) and not require_fields:
             return None
 

@@ -1,0 +1,14 @@
+runtime operator
+filename "example_code/debug.prd"
+line 1
+line 3
+line 3
+const #'123'#
+store test_140737219109232
+load test_140737219109232
+tuple 1
+tuple 0
+tuple 2
+print
+const #None#
+return

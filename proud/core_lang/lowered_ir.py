@@ -1,4 +1,4 @@
-import hybridts.type_encoding as te
+import proud.unification.type_encode as te
 import proud.core_lang.scope as scope
 import typing as t
 from dataclasses import dataclass

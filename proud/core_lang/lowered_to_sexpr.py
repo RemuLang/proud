@@ -5,15 +5,12 @@ from proud.core_lang.unique_scope import UniqueScope
 from proud.core_lang import sexpr
 from proud.core_lang.record_layout_rearrangement import polymorphize, monomorphize
 from proud.core_lang.modular_compiler import CompilerGlobalContext
-from hybridts.type_encoding import pre_visit
+from proud.unification.type_encode import pre_visit
 from contextlib import contextmanager
 import proud.core_lang.lowered_ir as ir
 import typing
+
 empty_record = te.Record(te.empty_row)
-type_obj = (te.App, te.Arrow, te.Var, te.Nom, te.Fresh, te.Tuple, te.Forall,
-            te.Record, te.Implicit)
-
-
 
 
 def _sort_key(x):
@@ -32,8 +29,7 @@ def resolve_type(expr: Expr, comp_ctx: CompilerGlobalContext):
     def resolve(expr: Expr):
         expr_type = tc_state.infer(expr.type)
         expr_type = pre_visit(replace_to_unit)((), expr_type)
-        if isinstance(expr.expr, Const) and isinstance(
-                expr.type, te.App) and expr.type == type_type:
+        if isinstance(expr.expr, Const) and isinstance(expr.type, te.App) and expr.type == type_type:
             # TODO: serialize type objects to marshal-able repr
             expr.expr = Const(id(tc_state.infer(expr.type)))
         elif isinstance(expr.expr, Polymorphization):
@@ -94,18 +90,16 @@ class SExprGen:
         if isinstance(expr, ir.Extern):
             return sexpr.extern_k, expr.foreign_code
         if isinstance(expr, ir.ITE):
-            return self.ite(expr.token, expr.cond, expr.true_clause,
-                            expr.else_clause)
+            return self.ite(expr.token, expr.cond, expr.true_clause, expr.else_clause)
         raise NotImplementedError(type(expr))
 
     def ite(self, token, cond, tc, ec):
         base = 'if{}'.format(id(token))
         end_block = base + '.end'
         true_block = base + '.true'
-        return (sexpr.block_k, [(sexpr.goto_if_k, true_block, self.eval(cond)),
-                                self.eval(ec), (sexpr.goto_k, end_block),
-                                (sexpr.label_k, true_block),
-                                self.eval(tc), (sexpr.label_k, end_block)])
+        return (sexpr.block_k,
+                [(sexpr.goto_if_k, true_block, self.eval(cond)), self.eval(ec), (sexpr.goto_k, end_block),
+                 (sexpr.label_k, true_block), self.eval(tc), (sexpr.label_k, end_block)])
 
     def set(self, name, expr):
         expr = self.eval(expr)
@@ -123,7 +117,6 @@ class SExprGen:
         return sexpr.label_k, str(name)
 
     def fun(self, name, filename, arg: scope.Sym, expr: Expr):
-
         with in_subscope(self) as sub_scope:
             sub_scope: UniqueScope
             sub_scope.enter(arg)
@@ -192,9 +185,7 @@ class SExprGen:
                 elt1 = []
                 elt2 = []
                 for i, (ith, each) in enumerate(hd):
-                    elt = [(sexpr.set_k, sub, (sexpr.prj_k, (sexpr.prj_k, tag,
-                                                             0), ith)),
-                           rec_gen(each, depth + 1)]
+                    elt = [(sexpr.set_k, sub, (sexpr.prj_k, (sexpr.prj_k, tag, 0), ith)), rec_gen(each, depth + 1)]
                     elt1.append((sexpr.block_k, elt))
 
                 for i, ith in enumerate(tl):
@@ -241,15 +232,12 @@ class SExprGen:
                 elt2 = sexpr.tuple_k, []
                 i = 0
                 for i, (ith, each) in enumerate(hd):
-                    elts1[ith] = (sexpr.block_k, [(sexpr.set_k, sub,
-                                                   (sexpr.prj_k, (sexpr.prj_k,
-                                                                  tag, 0), i)),
+                    elts1[ith] = (sexpr.block_k, [(sexpr.set_k, sub, (sexpr.prj_k, (sexpr.prj_k, tag, 0), i)),
                                                   rec_gen(each, depth + 1)])
                 for i, (ith, each) in enumerate(tl):
                     elts1[ith] = (sexpr.prj_k, (sexpr.prj_k, tag, 1), i)
 
-                elt1 = sexpr.tuple_k, tuple(
-                    e for _, e in sorted(elts1.items(), key=_sort_key))
+                elt1 = sexpr.tuple_k, tuple(e for _, e in sorted(elts1.items(), key=_sort_key))
                 elts.extend([elt1, elt2])
 
             return sexpr.tuple_k, elts

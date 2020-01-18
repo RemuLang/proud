@@ -41,22 +41,34 @@ class IsRigid(Property):
     pass
 
 
+@dataclass(eq=True, order=True, frozen=True)
+class KeepMono(Property):
+    pass
+
+
 is_rigid = IsRigid()
+keep_mono = KeepMono()
+
+Level = int
 
 
 class PropertyTVGroup:
     final: t.Optional['T']
-    link_from: t.Set['PropertyTVGroup']
+    linked_by: t.Set['PropertyTVGroup']
     vars: t.Set['Var']
+    levels: t.Set[Level]
 
     def __init__(self, *props: Property):
         self.vars = set()
         self.properties = set(props)
-        self.link_from = set()
+        self.levels = set()
+        self.linked_by = set()
         self.final = None
 
     def add(self, var: 'Var'):
         self.vars.add(var)
+        var.belong_to = self
+        self.levels.add(var.level)
 
     def final_to(self, type: 'T'):
         if isinstance(type, Var):
@@ -69,23 +81,31 @@ class PropertyTVGroup:
         for each in TV:
             if each.belong_to is self:
                 continue
-            each.belong_to.link_from.add(self)
+            each.belong_to.linked_by.add(self)
         self.final = type
 
     def merge_into_(self, another: 'PropertyTVGroup'):
         for each in self.vars:
             each.belong_to = another
         another.vars |= self.vars
-        another.link_from |= self.link_from
+        another.linked_by |= self.linked_by
         another.properties |= self.properties
+        another.levels |= self.levels
 
-    def destroy_(self, levels: t.List[t.Set['Var']]):
-        for each in self.vars:
-            levels[each.level].remove(each)
+    def is_closed_after(self, level: Level):
+        if level < min(self.levels):
+            return True
+        return all(each.is_closed_after(level) for each in self.linked_by)
+
+    def destroy_(self):
+        assert self.final
+        del self.levels
+        del self.vars
+        del self.linked_by
 
 
 class Var:
-    level: int
+    level: Level
     belong_to: PropertyTVGroup
 
 
@@ -112,10 +132,9 @@ if DEBUG:
         if you don't mind the bad error reporting :)
         """
 
-        def __init__(self, level: int, name=None):
+        def __init__(self, name=None):
             global cnt
             self.name = name
-            self.level = level
             self.id = cnt
             cnt += 1
 
@@ -129,8 +148,7 @@ else:
         if you don't mind the bad error reporting :)
         """
 
-        def __init__(self, level: int, name=None):
-            self.level = level
+        def __init__(self, name=None):
             self.name = name
 
         def __repr__(self):
@@ -378,7 +396,7 @@ def normalize_forall(bounds: t.Iterable[str], poly):
 
 
 def ftv(t: T) -> t.Set[Var]:
-    vars: t.Set[Var] = set()
+    vars = set()
 
     def _visit(t):
         if isinstance(t, Var):
@@ -399,6 +417,20 @@ def generics(t):
 
     visit_check(_visit)(t)
     return vars
+
+
+def fresh(new_var, t):
+    vars = dict()
+
+    def _visit(_, t):
+        if isinstance(t, Var):
+            v = vars.get(t)
+            if not v:
+                v = vars[t] = new_var()
+            return (), v
+        return (), t
+
+    return pre_visit(_visit)((), t)
 
 
 def subst_once(subst_map: t.Dict[T, T], ty):

@@ -6,7 +6,7 @@ cnt = 0
 tcs = TCState()
 
 list = te.InternalNom("list")
-var = tcs.new_var()
+var = tcs.user_var()
 
 t1 = te.normalize_forall(["x"], te.App(te.UnboundFresh("x"), te.UnboundFresh("x")))
 t2 = te.normalize_forall(["x"], te.App(te.UnboundFresh("x"), var))
@@ -32,12 +32,12 @@ tho = tcs.new_var()
 r2 = te.row_of_map({'a': x3}, te.RowPoly(tho))
 r2 = te.Record(r2)
 tcs.unify(r1, r2)
-# print(tcs.infer(r1))
-# print(tcs.infer(r2))
-# print(tcs.infer(tho))
+print(tcs.infer(r1))
+print(tcs.infer(r2))
+print(tcs.infer(tho))
 
-var = tcs.new_var()
-var2 = tcs.new_var()
+var = tcs.user_var()
+var2 = tcs.user_var()
 
 t1 = te.normalize_forall(["x"], te.App(te.UnboundFresh("x"), te.UnboundFresh("x")))
 t2 = te.normalize_forall(["x"], te.App(te.UnboundFresh("x"), var))
@@ -48,8 +48,8 @@ try:
 except te.excs.TypeMismatch:
     pass
 
-var = tcs.new_var()
-var2 = tcs.new_var()
+var = tcs.user_var()
+var2 = tcs.user_var()
 
 t1 = te.normalize_forall(["x"], te.App(te.UnboundFresh("x"), te.Arrow(te.UnboundFresh("x"), var)))
 t2 = te.normalize_forall(["x"], te.App(te.UnboundFresh("x"), te.Arrow(var2, var2)))
